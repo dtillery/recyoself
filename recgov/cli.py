@@ -1,8 +1,8 @@
 import calendar
-from dataclasses import dataclass, field
 import datetime
-from datetime import timedelta
 import time
+from dataclasses import dataclass, field
+from datetime import timedelta
 
 import click
 import requests
@@ -109,7 +109,10 @@ def get_campsites(permit_area_id) -> list[Campsite]:
 
 
 def set_availability(
-    campsite: Campsite, start_date: datetime.date, end_date: datetime.date, lottery_id: str
+    campsite: Campsite,
+    start_date: datetime.date,
+    end_date: datetime.date,
+    lottery_id: str,
 ) -> None:
     url = f"{RECGOV_PERMIT_ITINERARY_URL}/{campsite.permit_area_id}/division/{campsite.campsite_id}/eapavailability/month/{lottery_id}"
     months = list(range(start_date.month, end_date.month + 1))
@@ -134,7 +137,9 @@ def find_workable_itineraries(campsites) -> list:
     start_campsite = campsites[0]
     workable_itineraries = []
     for date in start_campsite.available_dates():
-        itinerary = [(campsites[i], date + timedelta(days=i)) for i in range(num_campsites)]
+        itinerary = [
+            (campsites[i], date + timedelta(days=i)) for i in range(num_campsites)
+        ]
         if all([pair[1] in pair[0].available_dates() for pair in itinerary]):
             workable_itineraries.append(itinerary)
     return workable_itineraries
@@ -169,7 +174,7 @@ def find_itineraries(start, end, reversable, eap_lottery_id, campsites):
     for campsite in ordered_campsites:
         set_availability(campsite, start, end, eap_lottery_id)
 
-    print(f"=== \"{" > ".join(campsites)}\" from {start:%m/%d/%Y} to {end:%m/%d/%Y} ===")
+    print(f'=== "{' > '.join(campsites)}" from {start:%m/%d/%Y} to {end:%m/%d/%Y} ===')
     itineraries = find_workable_itineraries(ordered_campsites)
 
     reversed_itineraries = []
@@ -181,11 +186,17 @@ def find_itineraries(start, end, reversable, eap_lottery_id, campsites):
     else:
         print(f"{len(itineraries)} possible matches found:")
         for itinerary in itineraries:
-            print(" > ".join([f"{i[0].abbreviation} ({i[1]:%b %d})" for i in itinerary]))
+            print(
+                " > ".join([f"{i[0].abbreviation} ({i[1]:%b %d})" for i in itinerary])
+            )
         if reversable:
             print(f"{len(reversed_itineraries)} possible reversed-matches found:")
             for itinerary in reversed_itineraries:
-                print(" > ".join([f"{i[0].abbreviation} ({i[1]:%b %d})" for i in itinerary]))
+                print(
+                    " > ".join(
+                        [f"{i[0].abbreviation} ({i[1]:%b %d})" for i in itinerary]
+                    )
+                )
 
 
 if __name__ == "__main__":
