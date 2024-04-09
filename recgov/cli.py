@@ -11,14 +11,16 @@ from .campsite import Campsite, CampsiteAvailability
 
 load_dotenv()
 
-PERMIT_AREA_ID = 4675321  # Glacier National Park
+PERMIT_AREA_ID: int = 4675321  # Glacier National Park
 
-RECGOV_BASE_URL = "https://www.recreation.gov/api"
-RECGOV_PERMIT_CONTENT_URL = f"{RECGOV_BASE_URL}/permitcontent"
-RECGOV_PERMIT_ITINERARY_URL = f"{RECGOV_BASE_URL}/permititinerary"
+RECGOV_BASE_URL: str = "https://www.recreation.gov/api"
+RECGOV_PERMIT_CONTENT_URL: str = f"{RECGOV_BASE_URL}/permitcontent"
+RECGOV_PERMIT_ITINERARY_URL: str = f"{RECGOV_BASE_URL}/permititinerary"
 
-USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4.1 Safari/605.1.15"
-HEADERS = {"user-agent": USER_AGENT}
+USER_AGENT: str = (
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4.1 Safari/605.1.15"
+)
+HEADERS: dict = {"user-agent": USER_AGENT}
 
 
 def get_campsites(permit_area_id) -> list[Campsite]:
@@ -83,7 +85,7 @@ def find_workable_itineraries(campsites) -> list:
 
 @click.group()
 @click.pass_context
-def cli(ctx):
+def cli(ctx) -> None:
     ctx.obj = {}
 
 
@@ -93,7 +95,7 @@ def cli(ctx):
 @click.option("--reversable", "-r", type=bool, is_flag=True)
 @click.option("--eap-lottery-id", type=str, envvar="RECGOV_EAP_LOTTERY_ID")
 @click.argument("campsites", nargs=-1)
-def find_itineraries(start, end, reversable, eap_lottery_id, campsites):
+def find_itineraries(start, end, reversable, eap_lottery_id, campsites) -> None:
     start = start.date()
     end = end.date()
     fetched_campsites = {
