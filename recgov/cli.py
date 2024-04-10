@@ -1,21 +1,32 @@
 import calendar
 import datetime
+import os
+import tempfile
 import time
 from datetime import timedelta
+from zipfile import ZipFile
 
 import click
 import requests
 from dotenv import load_dotenv
+from tqdm import tqdm
 
 from .campsite import Campsite, CampsiteAvailability
 
 load_dotenv()
+
+BASE_DATA_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../data"))
 
 PERMIT_AREA_ID: int = 4675321  # Glacier National Park
 
 RECGOV_BASE_URL: str = "https://www.recreation.gov/api"
 RECGOV_PERMIT_CONTENT_URL: str = f"{RECGOV_BASE_URL}/permitcontent"
 RECGOV_PERMIT_ITINERARY_URL: str = f"{RECGOV_BASE_URL}/permititinerary"
+
+RIDB_FULL_CSV_URL: str = (
+    "https://ridb.recreation.gov/downloads/RIDBFullExport_V1_CSV.zip"
+)
+RIDB_ENTITIES: list[str] = ["Facilities"]
 
 USER_AGENT: str = (
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4.1 Safari/605.1.15"
@@ -87,6 +98,28 @@ def find_workable_itineraries(campsites) -> list:
 @click.pass_context
 def cli(ctx) -> None:
     ctx.obj = {}
+
+
+@cli.command()
+def fetch_ridb_data() -> None:
+    ridb_zip = requests.get(RIDB_FULL_CSV_URL, stream=True)
+    chunk_size: int = 1024
+    total_size: int = int(ridb_zip.headers.get("content-length", 0))
+    print(f"=== Downloading full RIDB CSV zip...")
+    with tempfile.NamedTemporaryFile(delete_on_close=False) as tempf:
+        with tqdm(total=total_size, unit="B", unit_scale=True) as progress_bar:
+            for chunk in ridb_zip.iter_content(chunk_size=chunk_size):
+                progress_bar.update(len(chunk))
+                tempf.write(chunk)
+            tempf.close()
+            if total_size != 0 and progress_bar.n != total_size:
+                raise RuntimeError("Could not successfully download file")
+
+        print(f"=== Extracting relevant entity CSVs from zip to {BASE_DATA_DIR}...")
+        with ZipFile(tempf.name, "r") as zp:
+            for entity in RIDB_ENTITIES:
+                csv_filename = f"{entity}_API_v1.csv"
+                zp.extract(csv_filename, f"{BASE_DATA_DIR}")
 
 
 @cli.command()

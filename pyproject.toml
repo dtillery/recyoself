@@ -10,6 +10,7 @@ python = "^3.12"
 requests = "^2.31.0"
 click = "^8.1.7"
 python-dotenv = "^1.0.1"
+tqdm = "^4.66.2"
 
 [tool.poetry.scripts]
 recgov = "recgov.cli:cli"
@@ -20,6 +21,7 @@ types-requests = "^2.31.0.20240406"
 black = "^24.3.0"
 isort = "^5.13.2"
 pre-commit = "^3.7.0"
+types-tqdm = "^4.66.0.20240106"
 
 [build-system]
 requires = ["poetry-core"]

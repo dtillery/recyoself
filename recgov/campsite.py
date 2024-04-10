@@ -36,7 +36,7 @@ class Campsite:
         self._availabilities.append(CampsiteAvailability(**kwargs))
 
     @property
-    def availabilities(self) -> list[CampsiteAvailability]:
+    def availabilities(self) -> list["CampsiteAvailability"]:
         return sorted(self._availabilities)
 
     def available_dates(self, sites: int = 1) -> list[datetime.date]:
