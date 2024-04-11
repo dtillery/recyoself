@@ -12,6 +12,9 @@ from dotenv import load_dotenv
 from tqdm import tqdm
 
 from .campsite import Campsite, CampsiteAvailability
+from .db import Session, drop_db, init_db
+from .models import Organization
+from .ridb import RIDB
 
 load_dotenv()
 
@@ -26,7 +29,7 @@ RECGOV_PERMIT_ITINERARY_URL: str = f"{RECGOV_BASE_URL}/permititinerary"
 RIDB_FULL_CSV_URL: str = (
     "https://ridb.recreation.gov/downloads/RIDBFullExport_V1_CSV.zip"
 )
-RIDB_ENTITIES: list[str] = ["Facilities"]
+RIDB_ENTITIES: list[str] = ["Campsites", "Facilities", "Organizations", "RecAreas"]
 
 USER_AGENT: str = (
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4.1 Safari/605.1.15"
@@ -101,25 +104,18 @@ def cli(ctx) -> None:
 
 
 @cli.command()
-def fetch_ridb_data() -> None:
-    ridb_zip = requests.get(RIDB_FULL_CSV_URL, stream=True)
-    chunk_size: int = 1024
-    total_size: int = int(ridb_zip.headers.get("content-length", 0))
-    print(f"=== Downloading full RIDB CSV zip...")
-    with tempfile.NamedTemporaryFile(delete_on_close=False) as tempf:
-        with tqdm(total=total_size, unit="B", unit_scale=True) as progress_bar:
-            for chunk in ridb_zip.iter_content(chunk_size=chunk_size):
-                progress_bar.update(len(chunk))
-                tempf.write(chunk)
-            tempf.close()
-            if total_size != 0 and progress_bar.n != total_size:
-                raise RuntimeError("Could not successfully download file")
+def init() -> None:
+    init_db()
+    ridb = RIDB()
+    ridb.fetch_entities()
+    with Session.begin() as session:
+        for organization in ridb.make_organizations():
+            session.add(organization)
 
-        print(f"=== Extracting relevant entity CSVs from zip to {BASE_DATA_DIR}...")
-        with ZipFile(tempf.name, "r") as zp:
-            for entity in RIDB_ENTITIES:
-                csv_filename = f"{entity}_API_v1.csv"
-                zp.extract(csv_filename, f"{BASE_DATA_DIR}")
+
+@cli.command()
+def drop() -> None:
+    drop_db()
 
 
 @cli.command()
@@ -168,6 +164,29 @@ def find_itineraries(start, end, reversable, eap_lottery_id, campsites) -> None:
                         [f"{i[0].abbreviation} ({i[1]:%b %d})" for i in itinerary]
                     )
                 )
+
+
+@cli.command()
+def get_lotteries() -> None:
+    lotteries_url = f"{RECGOV_BASE_URL}/lottery/available"
+    r = requests.get(lotteries_url, headers=HEADERS)
+    r.raise_for_status()
+
+    statuses = set()
+    inventory_types = set()
+
+    for lottery in r.json()["lotteries"]:
+        inventory_id = lottery["inventory_id"]
+        inventory_type = lottery["inventory_type"]
+        name = lottery["name"]
+        facility_name = lottery["inventory_info"]["facility_name"]
+        statuses.add(lottery["status"])
+        inventory_types.add(lottery["inventory_type"])
+        if inventory_type == "queuelottery":
+            print(f"queuelottery: {inventory_id} {name} {facility_name}")
+
+    print(f"Statuses: {statuses}")
+    print(f"Inventory Types: {inventory_types}")
 
 
 if __name__ == "__main__":
