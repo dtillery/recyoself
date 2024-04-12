@@ -36,6 +36,14 @@ class RIDB:
                 org_id=data["OrgID"],
             )
 
+    def make_org_157(self) -> Organization:
+        """There exists an Organization with ID 157 that does not appear in RIDB
+        Organization-exports but is referenced in other entities. Considering that many
+        Departments of X refer to it as their ParentOrg, I am going to assume it's
+        equivalent to the US Government for our purposes."""
+
+        return Organization(name="US Government", abbr="USA", org_id="157")
+
     def make_rec_areas(self, session: "Session") -> Iterator[RecreationArea]:
         for data in self._read_csv("RecAreas"):
             kwargs = {

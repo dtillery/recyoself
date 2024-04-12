@@ -113,6 +113,7 @@ def init(skip_download) -> None:
     with Session.begin() as session:
         for organization in ridb.make_organizations():
             session.add(organization)
+        session.add(ridb.make_org_157())
         for rec_area in ridb.make_rec_areas(session):
             session.add(rec_area)
 
