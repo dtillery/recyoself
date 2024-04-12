@@ -5,6 +5,7 @@ from sqlmodel import Field, Relationship
 from .base import Base
 
 if TYPE_CHECKING:
+    from .facility import Facility
     from .recreation_area import RecreationArea
 
 
@@ -13,3 +14,4 @@ class Organization(Base, table=True):
     abbr: str
     org_id: int = Field(unique=True)
     rec_areas: list["RecreationArea"] = Relationship(back_populates="org")
+    facilities: list["Facility"] = Relationship(back_populates="org")

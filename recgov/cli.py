@@ -116,6 +116,8 @@ def init(skip_download) -> None:
         session.add(ridb.make_org_157())
         for rec_area in ridb.make_rec_areas(session):
             session.add(rec_area)
+        for facility in ridb.make_facilities(session):
+            session.add(facility)
 
 
 @cli.command()

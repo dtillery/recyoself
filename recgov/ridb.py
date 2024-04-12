@@ -10,7 +10,7 @@ from tqdm import tqdm
 
 from recgov import USER_DATA_DIR
 
-from .models import Organization, RecreationArea
+from .models import Facility, Organization, RecreationArea
 
 if TYPE_CHECKING:
     from sqlalchemy.orm import Session
@@ -56,7 +56,34 @@ class RIDB:
                 Organization.org_id == data["ParentOrgID"]
             )
             org = session.scalars(org_stmt).first()
+
             yield RecreationArea(org=org, **kwargs)
+
+    def make_facilities(self, session: "Session") -> Iterator[Facility]:
+        for data in self._read_csv("Facilities"):
+            if not data["FacilityName"]:
+                continue
+
+            kwargs = {
+                "name": data["FacilityName"],
+                "facility_id": data["FacilityID"],
+                "type": data["FacilityTypeDescription"],
+            }
+            # In JSON, "OrgFacilityID" and "ParentOrgID" are switched lol
+            org_stmt = select(Organization).where(
+                Organization.org_id == data["OrgFacilityID"]
+            )
+            org = session.scalars(org_stmt).first()
+
+            rec_area = None
+            rec_area_id = data["ParentRecAreaID"]
+            if rec_area_id:
+                rec_area_stmt = select(RecreationArea).where(
+                    RecreationArea.rec_area_id == rec_area_id
+                )
+                rec_area = session.scalars(rec_area_stmt).first()
+
+            yield Facility(org=org, rec_area=rec_area, **kwargs)
 
     def fetch_entities(self) -> None:
         with NamedTemporaryFile(delete_on_close=False) as tempf:
