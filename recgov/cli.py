@@ -104,10 +104,12 @@ def cli(ctx) -> None:
 
 
 @cli.command()
-def init() -> None:
+@click.option("--skip-download", type=bool, is_flag=True)
+def init(skip_download) -> None:
     init_db()
     ridb = RIDB()
-    ridb.fetch_entities()
+    if not skip_download:
+        ridb.fetch_entities()
     with Session.begin() as session:
         for organization in ridb.make_organizations():
             session.add(organization)
