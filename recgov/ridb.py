@@ -94,7 +94,6 @@ class RIDB:
         response = requests.get(self.entities_csv_zip_url, stream=True)
         chunk_size: int = 1024
         total_size: int = int(response.headers.get("content-length", 0))
-        print(f"=== Downloading full RIDB CSV zip...")
         with tqdm(total=total_size, unit="B", unit_scale=True) as progress_bar:
             for chunk in response.iter_content(chunk_size=chunk_size):
                 progress_bar.update(len(chunk))
@@ -104,7 +103,6 @@ class RIDB:
                 raise RuntimeError("Could not successfully download file")
 
     def _extract_entities(self, zip_file: IO[Any]) -> None:
-        print(f"=== Extracting relevant entity CSVs from zip to {self.data_dir}...")
         self._ensure_data_dir()
         with ZipFile(zip_file.name, "r") as zp:
             for entity in self.entities:
@@ -115,7 +113,18 @@ class RIDB:
         os.makedirs(self.data_dir, exist_ok=True)
 
     def _read_csv(self, entity: str) -> Iterator[dict[str, str]]:
-        with open(f"{self.data_dir}/{entity}_API_v1.csv", "r") as f:
+        filepath = f"{self.data_dir}/{entity}_API_v1.csv"
+        num_lines = self._get_num_records_csv(filepath)
+        with open(filepath, "r") as f:
             reader = csv.DictReader(f)
-            for row in reader:
-                yield row
+            with tqdm(
+                total=num_lines, unit="recs", desc=f"Loading {entity}"
+            ) as progress_bar:
+                for row in reader:
+                    yield row
+                    progress_bar.update()
+
+    def _get_num_records_csv(self, filepath: str) -> int:
+        with open(filepath, "r") as f:
+            reader = csv.reader(f)
+            return sum(1 for _ in reader) - 1

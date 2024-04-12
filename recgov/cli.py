@@ -109,8 +109,10 @@ def init(skip_download) -> None:
     init_db()
     ridb = RIDB()
     if not skip_download:
+        print(f"=== Fetching RIDB entities full-export CSVs...")
         ridb.fetch_entities()
     with Session.begin() as session:
+        print(f"=== Loading entities into database...")
         for organization in ridb.make_organizations():
             session.add(organization)
         session.add(ridb.make_org_157())
