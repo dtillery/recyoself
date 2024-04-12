@@ -1,15 +1,19 @@
 import csv
 import os
 from tempfile import NamedTemporaryFile
-from typing import IO, Any, Iterator
+from typing import IO, TYPE_CHECKING, Any, Iterator
 from zipfile import ZipFile
 
 import requests
+from sqlmodel import select
 from tqdm import tqdm
 
 from recgov import USER_DATA_DIR
 
-from .models import Organization
+from .models import Organization, RecreationArea
+
+if TYPE_CHECKING:
+    from sqlalchemy.orm import Session
 
 
 class RIDB:
@@ -24,13 +28,27 @@ class RIDB:
     def data_dir(self) -> str:
         return f"{USER_DATA_DIR}/ridb"
 
-    def make_organizations(self) -> Iterator:
+    def make_organizations(self) -> Iterator[Organization]:
         for data in self._read_csv("Organizations"):
             yield Organization(
                 name=data["OrgName"],
-                abbreviation=data["OrgAbbrevName"],
+                abbr=data["OrgAbbrevName"],
                 org_id=data["OrgID"],
             )
+
+    def make_rec_areas(self, session: "Session") -> Iterator[RecreationArea]:
+        for data in self._read_csv("RecAreas"):
+            kwargs = {
+                "name": data["RecAreaName"],
+                "org_rec_area_id": data["OrgRecAreaID"],
+                "rec_area_id": data["RecAreaID"],
+            }
+
+            org_stmt = select(Organization).where(
+                Organization.org_id == data["ParentOrgID"]
+            )
+            org = session.scalars(org_stmt).first()
+            yield RecreationArea(org=org, **kwargs)
 
     def fetch_entities(self) -> None:
         with NamedTemporaryFile(delete_on_close=False) as tempf:

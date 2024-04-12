@@ -111,6 +111,8 @@ def init() -> None:
     with Session.begin() as session:
         for organization in ridb.make_organizations():
             session.add(organization)
+        for rec_area in ridb.make_rec_areas(session):
+            session.add(rec_area)
 
 
 @cli.command()
