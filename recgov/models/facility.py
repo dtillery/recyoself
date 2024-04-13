@@ -6,6 +6,8 @@ from sqlmodel import Field, Relationship
 from .base import Base
 
 if TYPE_CHECKING:
+    from .itinerary import PermitItinerary
+    from .itinerary_stop import ItineraryStop
     from .organization import Organization
     from .recreation_area import RecreationArea
 
@@ -40,3 +42,5 @@ class Facility(Base, table=True):
     rec_area: Optional["RecreationArea"] | None = Relationship(
         back_populates="facilities"
     )
+    itineraries: list["PermitItinerary"] = Relationship(back_populates="permit")
+    stops: list["ItineraryStop"] = Relationship(back_populates="permit")

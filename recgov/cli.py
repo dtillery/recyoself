@@ -9,11 +9,13 @@ from zipfile import ZipFile
 import click
 import requests
 from dotenv import load_dotenv
+from sqlmodel import select
 from tqdm import tqdm
 
 from .campsite import Campsite, CampsiteAvailability
 from .db import Session, drop_db, init_db
-from .models import Organization
+from .models import Facility, Organization
+from .recreationdotgov import RecreationDotGov
 from .ridb import RIDB
 
 load_dotenv()
@@ -125,6 +127,27 @@ def init(skip_download) -> None:
 @cli.command()
 def drop() -> None:
     drop_db()
+
+
+@cli.command()
+@click.argument("permit_id")
+def load_itinerary_stops(permit_id):
+    with Session.begin() as session:
+        permit_stmt = select(Facility).where(Facility.facility_id == permit_id)
+        permit = session.scalars(permit_stmt).first()
+        if not permit:
+            raise Exception(f"Could not find permit with ID {permit_id}")
+
+        rg = RecreationDotGov()
+        for stop in rg.make_permit_itinerary_stops(permit):
+            session.add(stop)
+
+
+@cli.command()
+@click.argument("permit_id")
+@click.argument("itinerary_name")
+def create_itinerary(permit_id, itinerary_name) -> None:
+    pass
 
 
 @cli.command()
