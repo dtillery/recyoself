@@ -99,7 +99,7 @@ def find_workable_itineraries(campsites) -> list:
     return workable_itineraries
 
 
-@click.group()
+@click.group(chain=True)
 @click.pass_context
 def cli(ctx) -> None:
     ctx.obj = {}
@@ -131,7 +131,7 @@ def drop() -> None:
 
 @cli.command()
 @click.argument("permit_id")
-def load_itinerary_stops(permit_id):
+def load_divisions(permit_id):
     with Session.begin() as session:
         permit_stmt = select(Facility).where(Facility.facility_id == permit_id)
         permit = session.scalars(permit_stmt).first()
@@ -139,8 +139,8 @@ def load_itinerary_stops(permit_id):
             raise Exception(f"Could not find permit with ID {permit_id}")
 
         rg = RecreationDotGov()
-        for stop in rg.make_permit_itinerary_stops(permit):
-            session.add(stop)
+        for division in rg.make_permit_divisions(permit):
+            session.add(division)
 
 
 @cli.command()

@@ -4,13 +4,13 @@ import requests
 
 from recgov import HEADERS
 
-from .models import Facility, ItineraryStop
+from .models import Division, Facility
 
 
 class RecreationDotGov:
     base_url: str = "https://www.recreation.gov/api"
 
-    def make_permit_itinerary_stops(self, permit: Facility) -> Iterator[ItineraryStop]:
+    def make_permit_divisions(self, permit: Facility) -> Iterator[Division]:
         for division_id, division in self._get_divisions(permit.facility_id).items():
             kwargs = {
                 "name": division["name"],
@@ -21,7 +21,7 @@ class RecreationDotGov:
                 "is_hidden": division["is_hidden"],
                 "is_active": division["is_active"],
             }
-            yield ItineraryStop(**kwargs)
+            yield Division(**kwargs)
 
     def _get_divisions(self, permitcontent_id: str) -> dict:
         return self._get(f"permitcontent/{permitcontent_id}/divisions")
