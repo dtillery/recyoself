@@ -8,7 +8,7 @@ from .base import Base
 
 if TYPE_CHECKING:
     from .division import Division
-    from .itinerary import PermitItinerary
+    from .itinerary import Itinerary
     from .organization import Organization
     from .recreation_area import RecreationArea
 
@@ -45,5 +45,5 @@ class Facility(Base, table=True):
     rec_area: Optional["RecreationArea"] | None = Relationship(
         back_populates="facilities"
     )
-    itineraries: list["PermitItinerary"] = Relationship(back_populates="permit")
+    itineraries: list["Itinerary"] = Relationship(back_populates="permit")
     divisions: list["Division"] = Relationship(back_populates="permit")

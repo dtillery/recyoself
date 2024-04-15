@@ -14,7 +14,7 @@ from tqdm import tqdm
 
 from .campsite import Campsite, CampsiteAvailability
 from .db import Session, drop_db, init_db
-from .models import Facility, Organization
+from .models import Facility, Itinerary, Organization
 from .recreationdotgov import RecreationDotGov
 from .ridb import RIDB
 
@@ -145,9 +145,21 @@ def load_divisions(permit_id):
 
 @cli.command()
 @click.argument("permit_id")
-@click.argument("itinerary_name")
-def create_itinerary(permit_id, itinerary_name) -> None:
-    pass
+@click.argument("new_itinerary_name")
+def create_itinerary(permit_id, new_itinerary_name) -> None:
+    with Session.begin() as session:
+        permit = session.scalars(
+            select(Facility).where(Facility.facility_id == permit_id)
+        ).first()
+        if not permit:
+            click.echo(click.style(f"No Permit found with ID {permit_id}.", fg="red"))
+            return
+
+        # itinerary = Itinerary(name=new_itinerary_name, permit=permit)
+        click.echo(f"Available divisions for {permit.name}:")
+        for division in permit.divisions:
+            if division.is_reservable:
+                click.echo(f'({division.type}) "{division.name}"')
 
 
 @cli.command()
