@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING
 
-from sqlmodel import Field, Relationship, SQLModel
+from sqlmodel import Field
 
 from .base import Base
 

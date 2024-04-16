@@ -23,5 +23,11 @@ class Itinerary(Base, table=True):
         back_populates="itineraries", link_model=ItineraryDivisionLink
     )
     # _divisions = relationship("ItineraryDivisionLink",
-    # back_populates="itinerary", collection_class=ordering_list("order"))
+    #     back_populates="itinerary", collection_class=ordering_list("order"))
     # divisions: ClassVar = association_proxy("_divisions", "division", creator=lambda div: ItineraryDivisionLink(division=div))
+
+    @property
+    def ordered_divisions_str(self) -> str:
+        return "\n".join(
+            [f"{i}. {d.name}" for i, d in enumerate(self.divisions, start=1)]
+        )

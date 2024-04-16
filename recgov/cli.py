@@ -144,6 +144,15 @@ def load_divisions(permit_id):
 
 
 @cli.command()
+def list_itineraries() -> None:
+    with Session.begin() as session:
+        itineraries = session.scalars(select(Itinerary)).all()
+        for itinerary in itineraries:
+            click.echo(f"=== {itinerary.name}")
+            click.echo(itinerary.ordered_divisions_str)
+
+
+@cli.command()
 @click.argument("permit_id")
 @click.argument("new_itinerary_name")
 def create_itinerary(permit_id, new_itinerary_name) -> None:
@@ -155,11 +164,48 @@ def create_itinerary(permit_id, new_itinerary_name) -> None:
             click.echo(click.style(f"No Permit found with ID {permit_id}.", fg="red"))
             return
 
-        # itinerary = Itinerary(name=new_itinerary_name, permit=permit)
-        click.echo(f"Available divisions for {permit.name}:")
-        for division in permit.divisions:
-            if division.is_reservable:
-                click.echo(f'({division.type}) "{division.name}"')
+        reservable_divisions = [d for d in permit.divisions if d.is_reservable]
+        click.echo(f"Divisions available for {permit.name}:")
+        for division in reservable_divisions:
+            click.echo(f'({division.type}) "{division.name}"')
+
+        itinerary = Itinerary(name=new_itinerary_name, permit=permit)
+        curr_itinerary_str, user_input = None, None
+        while True:
+            user_input = click.prompt(
+                'Enter a stop (partial) name ("save" to save, "cancel" to exit)'
+            )
+            if user_input in ["save", "cancel"]:
+                break
+            matching_divisions = [
+                d for d in reservable_divisions if user_input in d.name.lower()
+            ]
+            if not matching_divisions:
+                click.echo(
+                    f'Could find division match for "{user_input}, please try again.'
+                )
+            elif len(matching_divisions) > 1:
+                matches_str = "\n".join([f">>> {d.name}" for d in matching_divisions])
+                click.echo(
+                    f"Found multiple matches for {user_input}:\n{matches_str}\nPlease be more specific."
+                )
+            else:
+                division = matching_divisions[0]
+                click.echo(f"Adding {division.name} to the itinerary.")
+                itinerary.divisions.append(division)
+            click.echo(
+                f"Current itinerary includes:\n{itinerary.ordered_divisions_str}"
+            )
+
+        if not itinerary.divisions:
+            click.echo("No divisions added, not creating itinerary.")
+        elif user_input == "cancel":
+            click.echo("Not saving itinerary.")
+        else:
+            click.echo(
+                f'Saving itinerary "{itinerary.name} with stops:\n{itinerary.ordered_divisions_str}'
+            )
+            session.add(itinerary)
 
 
 @cli.command()
