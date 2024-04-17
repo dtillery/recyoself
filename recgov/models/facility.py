@@ -9,6 +9,7 @@ from .base import Base
 if TYPE_CHECKING:
     from .division import Division
     from .itinerary import Itinerary
+    from .lottery import Lottery
     from .organization import Organization
     from .recreation_area import RecreationArea
 
@@ -47,3 +48,4 @@ class Facility(Base, table=True):
     )
     itineraries: list["Itinerary"] = Relationship(back_populates="permit")
     divisions: list["Division"] = Relationship(back_populates="permit")
+    lotteries: list["Lottery"] = Relationship(back_populates="facility")

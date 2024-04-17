@@ -4,6 +4,7 @@ import os
 import tempfile
 import time
 from datetime import timedelta
+from typing import TYPE_CHECKING
 from zipfile import ZipFile
 
 import click
@@ -138,9 +139,17 @@ def load_divisions(permit_id):
         if not permit:
             raise Exception(f"Could not find permit with ID {permit_id}")
 
-        rg = RecreationDotGov()
-        for division in rg.make_permit_divisions(permit):
+        rdg = RecreationDotGov()
+        for division in rdg.make_permit_divisions(permit):
             session.add(division)
+
+
+@cli.command()
+def load_lotteries():
+    with Session.begin() as session:
+        rdg = RecreationDotGov()
+        for lottery in rdg.make_lotteries(session):
+            session.add(lottery)
 
 
 @cli.command()
