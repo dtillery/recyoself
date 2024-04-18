@@ -202,6 +202,8 @@ def create_itinerary(permit_id, new_itinerary_name) -> None:
                 division = matching_divisions[0]
                 click.echo(f"Adding {division.name} to the itinerary.")
                 itinerary.divisions.append(division)
+                session.add(itinerary)
+                session.flush()
             click.echo(
                 f"Current itinerary includes:\n{itinerary.ordered_divisions_str}"
             )
