@@ -1,15 +1,21 @@
+import datetime
 from datetime import datetime as dt
-from typing import TYPE_CHECKING, Iterator
+from typing import TYPE_CHECKING, Iterator, Optional
 
 import requests
 from sqlmodel import select
 
 from recgov import HEADERS
 
+from .division_availability import DivisionAvailability
 from .models import Division, Facility, Lottery
 
 if TYPE_CHECKING:
+    from uuid import UUID
+
     from sqlalchemy.orm import Session
+
+    from .models import Division
 
 
 class RecreationDotGov:
@@ -55,6 +61,34 @@ class RecreationDotGov:
             }
             yield Lottery(facility=facility, **kwargs)
 
+    def make_availabilities(
+        self,
+        start_date: datetime.date,
+        end_date: datetime.date,
+        division: Division,
+        lottery: Optional[Lottery] = None,
+    ) -> DivisionAvailability:
+        fac_id = division.permit.facility_id
+        div_id = division.division_id
+        lottery_id = lottery and lottery.lottery_id or None
+        months = list(range(start_date.month, end_date.month + 1))
+        year = start_date.year
+        div_avail = DivisionAvailability(division)
+        for month in months:
+            availabilities_by_date = self._get_availabilities(
+                fac_id, div_id, lottery_id, month, year
+            )
+            for date, avail_data in availabilities_by_date.items():
+                date = dt.strptime(date, "%Y-%m-%d").date()
+                if start_date <= date <= end_date:
+                    div_avail.set_availability(
+                        date=date,
+                        total_slots=avail_data["total"],
+                        available_slots=avail_data["remaining"],
+                        has_walkup=avail_data["show_walkup"],
+                    )
+        return div_avail
+
     def _get_divisions(self, permitcontent_id: str) -> dict:
         return self._get(f"permitcontent/{permitcontent_id}/divisions")
 
@@ -64,8 +98,30 @@ class RecreationDotGov:
         r.raise_for_status()
         return r.json().get("lotteries", [])
 
-    def _get(self, endpoint: str) -> dict:
+    def _get_availabilities(
+        self,
+        facility_id: str,
+        division_id: int,
+        lottery_id: Optional["UUID"],
+        month: int,
+        year: int,
+        eap: bool = True,
+    ) -> dict:
+        avail_substr = eap and "eapavailability" or "availability"
+        url = (
+            f"permititinerary/{facility_id}/division/{division_id}/{avail_substr}/month"
+        )
+        if lottery_id:
+            url = f"{url}/{lottery_id}"
+        params = {"month": month, "year": year}
+        return (
+            self._get(url, params=params)
+            .get("quota_type_maps", {})
+            .get("QuotaUsageBySiteDaily", {})
+        )
+
+    def _get(self, endpoint: str, params: Optional[dict] = None) -> dict:
         url = f"{self.base_url}/{endpoint}"
-        r = requests.get(url, headers=HEADERS)
+        r = requests.get(url, headers=HEADERS, params=params)
         r.raise_for_status()
         return r.json().get("payload", {})

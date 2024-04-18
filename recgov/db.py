@@ -7,7 +7,8 @@ from sqlmodel import SQLModel, create_engine
 from recgov import USER_DATA_DIR, models
 
 DATABASE_URL = f"sqlite:///{USER_DATA_DIR}/database.db"
-engine = engine = create_engine(DATABASE_URL)
+echo = True
+engine = engine = create_engine(DATABASE_URL, echo=echo)
 Session = sessionmaker(engine)
 
 

@@ -24,6 +24,9 @@ class Division(Base, table=True):
         back_populates="divisions", link_model=ItineraryDivisionLink
     )
 
+    def __repr__(self) -> str:
+        return f"Division({self.type}: {self.name})"
+
     @property
     def is_reservable(self):
         return not self.is_hidden and self.is_active

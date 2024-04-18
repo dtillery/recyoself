@@ -8,16 +8,19 @@ from typing import TYPE_CHECKING
 from zipfile import ZipFile
 
 import click
+import questionary as qu
 import requests
 from dotenv import load_dotenv
 from sqlmodel import select
 from tqdm import tqdm
 
-from .campsite import Campsite, CampsiteAvailability
 from .db import Session, drop_db, init_db
 from .models import Facility, Itinerary, Organization
 from .recreationdotgov import RecreationDotGov
 from .ridb import RIDB
+
+if TYPE_CHECKING:
+    from .division_availability import DivisionAvailability
 
 load_dotenv()
 
@@ -38,66 +41,6 @@ USER_AGENT: str = (
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4.1 Safari/605.1.15"
 )
 HEADERS: dict = {"user-agent": USER_AGENT}
-
-
-def get_campsites(permit_area_id) -> list[Campsite]:
-    url = f"{RECGOV_PERMIT_CONTENT_URL}/{permit_area_id}"
-    r = requests.get(url, headers=HEADERS)
-    r.raise_for_status()
-    data = r.json()
-
-    campsites = []
-    divisions = data["payload"]["divisions"]
-    for division_id, division_data in divisions.items():
-        is_hidden = division_data["is_hidden"]
-        if not is_hidden:
-            dataclass_args = {
-                "campsite_id": division_id,
-                "permit_area_id": permit_area_id,
-                "district": division_data["district"],
-                "full_name": division_data["name"],
-                "children": division_data.get("children", []),
-            }
-            c = Campsite(**dataclass_args)
-            campsites.append(c)
-    return campsites
-
-
-def set_availability(
-    campsite: Campsite,
-    start_date: datetime.date,
-    end_date: datetime.date,
-    lottery_id: str,
-) -> None:
-    url = f"{RECGOV_PERMIT_ITINERARY_URL}/{campsite.permit_area_id}/division/{campsite.campsite_id}/eapavailability/month/{lottery_id}"
-    months = list(range(start_date.month, end_date.month + 1))
-    for month in months:
-        print(
-            f"Fetching {calendar.month_name[month]} availabilities for {campsite.name}..."
-        )
-        params = {"month": int(month), "year": 2024}
-        r = requests.get(url, params=params, headers=HEADERS)
-        r.raise_for_status()
-        data = r.json()
-        dates = data["payload"]["quota_type_maps"]["QuotaUsageBySiteDaily"]
-        for date, date_data in dates.items():
-            date = datetime.datetime.strptime(date, "%Y-%m-%d").date()
-            if start_date <= date <= end_date:
-                campsite.save_availability(date, date_data)
-        time.sleep(1)
-
-
-def find_workable_itineraries(campsites) -> list:
-    num_campsites = len(campsites)
-    start_campsite = campsites[0]
-    workable_itineraries = []
-    for date in start_campsite.available_dates():
-        itinerary = [
-            (campsites[i], date + timedelta(days=i)) for i in range(num_campsites)
-        ]
-        if all([pair[1] in pair[0].available_dates() for pair in itinerary]):
-            workable_itineraries.append(itinerary)
-    return workable_itineraries
 
 
 @click.group(chain=True)
@@ -214,9 +157,25 @@ def create_itinerary(permit_id, new_itinerary_name) -> None:
             click.echo("Not saving itinerary.")
         else:
             click.echo(
-                f'Saving itinerary "{itinerary.name} with stops:\n{itinerary.ordered_divisions_str}'
+                f'Saving itinerary "{itinerary.name}" with stops:\n{itinerary.ordered_divisions_str}'
             )
             session.add(itinerary)
+
+
+def find_availability_date_matches(
+    availabilities: list["DivisionAvailability"],
+) -> list[list[tuple["DivisionAvailability", datetime.date]]]:
+    # TODO: make this not dumb
+    num_div_avails = len(availabilities)
+    matching_avail_dates = []
+    for avail_date in availabilities[0].available_dates():
+        date_combos = [
+            (availabilities[i], avail_date + timedelta(days=i))
+            for i in range(num_div_avails)
+        ]
+        if all([pair[1] in pair[0].available_dates() for pair in date_combos]):
+            matching_avail_dates.append(date_combos)
+    return matching_avail_dates
 
 
 @cli.command()
@@ -224,47 +183,67 @@ def create_itinerary(permit_id, new_itinerary_name) -> None:
 @click.option("--end", "-e", type=click.DateTime(formats=["%Y-%m-%d"]), required=True)
 @click.option("--reversable", "-r", type=bool, is_flag=True)
 @click.option("--eap-lottery-id", type=str, envvar="RECGOV_EAP_LOTTERY_ID")
-@click.argument("campsites", nargs=-1)
-def find_itineraries(start, end, reversable, eap_lottery_id, campsites) -> None:
+@click.argument("itinerary_name")
+def find_itineray_dates(start, end, reversable, eap_lottery_id, itinerary_name) -> None:
     start = start.date()
     end = end.date()
-    fetched_campsites = {
-        c.abbreviation: c
-        for c in get_campsites(PERMIT_AREA_ID)
-        if c.abbreviation in campsites
-    }
-    ordered_campsites = [fetched_campsites[abbr] for abbr in campsites]
-    if len(ordered_campsites) != len(campsites):
-        raise Exception(
-            f"Could not fetch all provided campsites ({campsites}), check your abbreviations"
-        )
+    itinerary = None
+    with Session.begin() as session:
+        itinerary = session.scalars(
+            select(Itinerary).where(Itinerary.name == itinerary_name)
+        ).first()
+        if not itinerary:
+            click.echo(f'No itinerary found with name "{itinerary_name}"')
+            return
 
-    for campsite in ordered_campsites:
-        set_availability(campsite, start, end, eap_lottery_id)
+        lotteries = itinerary.permit.lotteries
+        relevant_lottery = None
+        if len(lotteries) == 0:
+            # TODO: handle appropriately
+            pass
+        elif len(lotteries) == 1:
+            relevant_lottery = lotteries[0]
+        else:
+            choices: list[qu.Choice] = []
+            question = f'Select a lottery for "{itinerary.permit.name}":'
+            for l in lotteries:
+                title = f"{l.name}"
+                choices.append(qu.Choice(title, value=l))
+            relevant_lottery = qu.select(question, choices=choices).ask()
 
-    print(f'=== "{' > '.join(campsites)}" from {start:%m/%d/%Y} to {end:%m/%d/%Y} ===')
-    itineraries = find_workable_itineraries(ordered_campsites)
-
-    reversed_itineraries = []
-    if reversable:
-        reversed_itineraries = find_workable_itineraries(ordered_campsites[::-1])
-
-    if not (itineraries or reversed_itineraries):
-        print("No possible matches found for given campsites. :(")
-    else:
-        print(f"{len(itineraries)} possible matches found:")
-        for itinerary in itineraries:
-            print(
-                " > ".join([f"{i[0].abbreviation} ({i[1]:%b %d})" for i in itinerary])
+        rdg = RecreationDotGov()
+        division_availabilities: list[DivisionAvailability] = []
+        for division in itinerary.divisions:
+            division_availabilities.append(
+                rdg.make_availabilities(start, end, division, relevant_lottery)
             )
+
+        avail_matches = find_availability_date_matches(division_availabilities)
+
+        avail_matches_reversed = []
         if reversable:
-            print(f"{len(reversed_itineraries)} possible reversed-matches found:")
-            for itinerary in reversed_itineraries:
-                print(
-                    " > ".join(
-                        [f"{i[0].abbreviation} ({i[1]:%b %d})" for i in itinerary]
-                    )
+            avail_matches_reversed = find_availability_date_matches(
+                division_availabilities[::-1]
+            )
+
+        if not (avail_matches or avail_matches_reversed):
+            click.echo("No possible matches found for given campsites. :(")
+        else:
+            click.echo(f"{len(avail_matches)} possible matches found:")
+            for match in avail_matches:
+                click.echo(
+                    " > ".join([f"{i[0].division.name} ({i[1]:%b %d})" for i in match])
                 )
+            if reversable:
+                click.echo(
+                    f"{len(avail_matches_reversed)} possible reversed-matches found:"
+                )
+                for match in avail_matches_reversed:
+                    click.echo(
+                        " > ".join(
+                            [f"{i[0].division.name} ({i[1]:%b %d})" for i in match]
+                        )
+                    )
 
 
 @cli.command()
