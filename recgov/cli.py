@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 import click
 import questionary as qu
 from dotenv import load_dotenv
+from prompt_toolkit.styles import Style
 from sqlmodel import select
 
 from .db import Session, drop_db, init_db
@@ -16,6 +17,21 @@ if TYPE_CHECKING:
     from .division_availability import DivisionAvailability
 
 load_dotenv()
+
+# stolen from https://github.com/tmbo/questionary/blob/master/examples/autocomplete_ants.py
+AUTOCOMPLETE_STYLE = Style(
+    [
+        ("separator", "fg:#cc5454"),
+        ("qmark", "fg:#673ab7 bold"),
+        ("question", ""),
+        ("selected", "fg:#cc5454"),
+        ("pointer", "fg:#673ab7 bold"),
+        ("highlighted", "fg:#673ab7 bold"),
+        ("answer", "fg:#f44336 bold"),
+        ("text", "fg:#FBE9E7"),
+        ("disabled", "fg:#858585 italic"),
+    ]
+)
 
 
 @click.group(chain=True)
@@ -92,20 +108,28 @@ def create_itinerary(permit_id, new_itinerary_name) -> None:
             return
 
         reservable_divisions = [d for d in permit.divisions if d.is_reservable]
-        click.echo(f"Divisions available for {permit.name}:")
-        for division in reservable_divisions:
-            click.echo(f'({division.type}) "{division.name}"')
+        choices = []
+        meta_info = {}
+        for d in reservable_divisions:
+            choices.append(d.name)
+            meta_info[d.name] = f"{d.type}, {d.district}"
 
-        itinerary = Itinerary(name=new_itinerary_name, permit=permit)
-        curr_itinerary_str, user_input = None, None
+        itinerary, curr_itinerary_str, user_input = None, None, None
         while True:
-            user_input = click.prompt(
-                'Enter a stop (partial) name ("save" to save, "cancel" to exit)'
-            )
-            if user_input in ["save", "cancel"]:
+            user_input = qu.autocomplete(
+                'Begin typing and make selection to add to your itinerary ("save" to save, "cancel" to cancel)\n',
+                choices=choices,
+                meta_information=meta_info,
+                ignore_case=True,
+                match_middle=True,
+                style=AUTOCOMPLETE_STYLE,
+            ).ask()
+
+            if user_input in ["save", "cancel", None]:
                 break
+
             matching_divisions = [
-                d for d in reservable_divisions if user_input in d.name.lower()
+                d for d in reservable_divisions if user_input.lower() in d.name.lower()
             ]
             if not matching_divisions:
                 click.echo(
@@ -119,17 +143,19 @@ def create_itinerary(permit_id, new_itinerary_name) -> None:
             else:
                 division = matching_divisions[0]
                 click.echo(f"Adding {division.name} to the itinerary.")
+                if not itinerary:
+                    itinerary = Itinerary(name=new_itinerary_name, permit=permit)
                 itinerary.add_division(division)
                 session.add(itinerary)
                 session.flush()
-            click.echo(
-                f"Current itinerary includes:\n{itinerary.ordered_divisions_str}"
-            )
+                click.echo(
+                    f"Current itinerary includes:\n{itinerary.ordered_divisions_str}"
+                )
 
-        if not itinerary.divisions:
-            click.echo("No divisions added, not creating itinerary.")
-        elif user_input == "cancel":
+        if user_input is None or user_input == "cancel" or itinerary is None:
             click.echo("Not saving itinerary.")
+        elif not itinerary.divisions:
+            click.echo("No divisions added, not creating itinerary.")
         else:
             click.echo(
                 f'Saving itinerary "{itinerary.name}" with stops:\n{itinerary.ordered_divisions_str}'
