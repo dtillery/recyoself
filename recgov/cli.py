@@ -144,7 +144,7 @@ def create_itinerary(permit_id, new_itinerary_name) -> None:
             else:
                 division = matching_divisions[0]
                 click.echo(f"Adding {division.name} to the itinerary.")
-                itinerary.divisions.append(division)
+                itinerary.add_division(division)
                 session.add(itinerary)
                 session.flush()
             click.echo(

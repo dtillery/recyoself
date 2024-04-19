@@ -4,7 +4,7 @@ import sqlalchemy as sa
 from sqlmodel import Field, Relationship
 
 from .base import Base
-from .itinerary_division_link import ItineraryDivisionLink
+from .ordered_itinerary_division import OrderedItineraryDivision
 
 if TYPE_CHECKING:
     from .facility import Facility
@@ -20,8 +20,8 @@ class Division(Base, table=True):
     is_active: bool
     permit_id: int = Field(foreign_key="facility.id")
     permit: "Facility" = Relationship(back_populates="divisions")
-    itineraries: list["Itinerary"] = Relationship(
-        back_populates="divisions", link_model=ItineraryDivisionLink
+    _itinerary_divisions: list["OrderedItineraryDivision"] = Relationship(
+        back_populates="division"
     )
 
     def __repr__(self) -> str:
