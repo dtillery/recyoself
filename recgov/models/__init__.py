@@ -1,5 +1,5 @@
 from .division import Division
-from .facility import Facility
+from .facility import Facility, FacilityType
 from .itinerary import Itinerary
 from .lottery import Lottery
 from .ordered_itinerary_division import OrderedItineraryDivision

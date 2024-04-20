@@ -6,10 +6,10 @@ import click
 import questionary as qu
 from dotenv import load_dotenv
 from prompt_toolkit.styles import Style
-from sqlmodel import select
+from sqlmodel import col, select
 
 from .db import Session, drop_db, init_db
-from .models import Facility, Itinerary, Organization
+from .models import Facility, FacilityType, Itinerary, Organization
 from .recreationdotgov import RecreationDotGov
 from .ridb import RIDB
 
@@ -88,11 +88,29 @@ def load_lotteries():
 
 @cli.command()
 def list_itineraries() -> None:
+    """List all Itineraries, with related permit name and all stops."""
     with Session.begin() as session:
         itineraries = session.scalars(select(Itinerary)).all()
-        for itinerary in itineraries:
-            click.echo(f"=== {itinerary.name}")
-            click.echo(itinerary.ordered_divisions_str)
+        for i in itineraries:
+            click.echo(f"=== {i.name} ({i.permit.name})")
+            click.echo(f"{i.ordered_divisions_str}\n")
+
+
+@cli.command()
+@click.argument("search_string", type=str, default="")
+def list_permits(search_string: str) -> None:
+    """List all Facilities that are of the permit type.
+
+    Optionally provide SEARCH_STRING to filter based on a case-insensitive
+    search of the permit's name.
+    """
+    with Session.begin() as session:
+        stmt = select(Facility).where(Facility.type == FacilityType.permit)
+        if search_string:
+            stmt = stmt.where(col(Facility.name).icontains(search_string))
+        permits = session.scalars(stmt).all()
+        for p in permits:
+            click.echo(f"{p.facility_id}: {p.name}")
 
 
 @cli.command()
@@ -108,6 +126,10 @@ def create_itinerary(permit_id, new_itinerary_name) -> None:
             return
 
         reservable_divisions = [d for d in permit.divisions if d.is_reservable]
+        if not reservable_divisions:
+            click.echo("No reservable sites found. Did you run load-divisions?")
+            return
+
         choices = []
         meta_info = {}
         for d in reservable_divisions:
@@ -131,17 +153,23 @@ def create_itinerary(permit_id, new_itinerary_name) -> None:
             matching_divisions = [
                 d for d in reservable_divisions if user_input.lower() in d.name.lower()
             ]
+            exact_match = [
+                d for d in matching_divisions if user_input.lower() == d.name.lower()
+            ]
+            print(matching_divisions)
+            print(exact_match)
+
             if not matching_divisions:
                 click.echo(
                     f'Could find division match for "{user_input}, please try again.'
                 )
-            elif len(matching_divisions) > 1:
+            elif len(matching_divisions) > 1 and not exact_match:
                 matches_str = "\n".join([f">>> {d.name}" for d in matching_divisions])
                 click.echo(
                     f"Found multiple matches for {user_input}:\n{matches_str}\nPlease be more specific."
                 )
             else:
-                division = matching_divisions[0]
+                division = exact_match and exact_match[0] or matching_divisions[0]
                 click.echo(f"Adding {division.name} to the itinerary.")
                 if not itinerary:
                     itinerary = Itinerary(name=new_itinerary_name, permit=permit)
