@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING, Iterator, Optional
 
 import requests
 from sqlmodel import select
+from tqdm import tqdm
 
 from recgov import HEADERS
 
@@ -22,44 +23,58 @@ class RecreationDotGov:
     base_url: str = "https://www.recreation.gov/api"
 
     def make_permit_divisions(self, permit: Facility) -> Iterator[Division]:
-        for division_id, division in self._get_divisions(permit.facility_id).items():
-            kwargs = {
-                "name": division["name"],
-                "type": division["type"] or None,
-                "division_id": division_id,
-                "district": division["district"],
-                "permit": permit,
-                "is_hidden": division["is_hidden"],
-                "is_active": division["is_active"],
-            }
-            yield Division(**kwargs)
+        divisions = self._get_divisions(permit.facility_id)
+        num_divisions = len(divisions)
+        with tqdm(
+            total=num_divisions, unit="divs", desc="Loading Divisions"
+        ) as progress_bar:
+            for division_id, division in divisions.items():
+                kwargs = {
+                    "name": division["name"],
+                    "type": division["type"] or None,
+                    "division_id": division_id,
+                    "district": division["district"],
+                    "permit": permit,
+                    "is_hidden": division["is_hidden"],
+                    "is_active": division["is_active"],
+                }
+                yield Division(**kwargs)
+                progress_bar.update()
 
     def make_lotteries(self, session: "Session") -> Iterator[Lottery]:
-        for lottery_data in self._get_lotteries():
-            facility_id = lottery_data["inventory_id"]
-            facility_stmt = select(Facility).where(Facility.facility_id == facility_id)
-            facility = session.scalars(facility_stmt).first()
-            kwargs = {
-                "lottery_id": lottery_data["id"],
-                "name": lottery_data["name"],
-                "desc": lottery_data["description"],
-                "summary": lottery_data["summary"],
-                "status": lottery_data["status"],
-                "type": lottery_data["inventory_type"],
-                "display_at": dt.fromisoformat(lottery_data["display_at"]),
-                "open_at": dt.fromisoformat(lottery_data["open_at"]),
-                "close_at": dt.fromisoformat(lottery_data["close_at"]),
-                "scheduled_run_at": dt.fromisoformat(lottery_data["scheduled_at"]),
-                "ran_at": dt.fromisoformat(lottery_data["ran_at"]),
-                "announced_at": dt.fromisoformat(lottery_data["announced_at"]),
-                "access_start_at": dt.fromisoformat(
-                    lottery_data["inventory_info"]["dates"]["start"]
-                ),
-                "access_end_at": dt.fromisoformat(
-                    lottery_data["inventory_info"]["dates"]["end"]
-                ),
-            }
-            yield Lottery(facility=facility, **kwargs)
+        lotteries = self._get_lotteries()
+        num_lotteries = len(lotteries)
+        with tqdm(
+            total=num_lotteries, unit="lottos", desc="Loading Lotteries"
+        ) as progress_bar:
+            for lottery_data in lotteries:
+                facility_id = lottery_data["inventory_id"]
+                facility_stmt = select(Facility).where(
+                    Facility.facility_id == facility_id
+                )
+                facility = session.scalars(facility_stmt).first()
+                kwargs = {
+                    "lottery_id": lottery_data["id"],
+                    "name": lottery_data["name"],
+                    "desc": lottery_data["description"],
+                    "summary": lottery_data["summary"],
+                    "status": lottery_data["status"],
+                    "type": lottery_data["inventory_type"],
+                    "display_at": dt.fromisoformat(lottery_data["display_at"]),
+                    "open_at": dt.fromisoformat(lottery_data["open_at"]),
+                    "close_at": dt.fromisoformat(lottery_data["close_at"]),
+                    "scheduled_run_at": dt.fromisoformat(lottery_data["scheduled_at"]),
+                    "ran_at": dt.fromisoformat(lottery_data["ran_at"]),
+                    "announced_at": dt.fromisoformat(lottery_data["announced_at"]),
+                    "access_start_at": dt.fromisoformat(
+                        lottery_data["inventory_info"]["dates"]["start"]
+                    ),
+                    "access_end_at": dt.fromisoformat(
+                        lottery_data["inventory_info"]["dates"]["end"]
+                    ),
+                }
+                yield Lottery(facility=facility, **kwargs)
+                progress_bar.update()
 
     def make_availabilities(
         self,
