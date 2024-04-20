@@ -9,7 +9,7 @@ from prompt_toolkit.styles import Style
 from sqlmodel import col, select
 
 from .db import Session, drop_db, init_db
-from .models import Facility, FacilityType, Itinerary, Organization
+from .models import Facility, FacilityType, Itinerary, Lottery, Organization
 from .recreationdotgov import RecreationDotGov
 from .ridb import RIDB
 
@@ -87,13 +87,40 @@ def load_lotteries():
 
 
 @cli.command()
+@click.argument("search_string", type=str, default="")
+def list_lotteries(search_string: str) -> None:
+    """List all Lotteries saved in the database.
+
+    Optionally provide SEARCH_STRING to filter based on a case-insensitive
+    search of the lottery's name and description.
+    """
+    with Session.begin() as session:
+        stmt = select(Lottery)
+        if search_string:
+            stmt = stmt.where(
+                (col(Lottery.name).icontains(search_string))
+                | (col(Lottery.desc).icontains(search_string))
+            )
+        lotteries = session.scalars(stmt).all()
+        for l in lotteries:
+            click.echo(f"=== {l.name}: {l.desc}")
+            click.echo(f"{l.lottery_id}")
+            click.echo(f"Facility: {l.facility.name} ({l.facility.facility_id})")
+            click.echo(f"Status: {l.status.name}")
+            click.echo(f"Open: {l.open_at.date()} - {l.close_at.date()}")
+            click.echo(f"Access: {l.access_start_at.date()} - {l.access_end_at.date()}")
+            click.echo()
+
+
+@cli.command()
 def list_itineraries() -> None:
     """List all Itineraries, with related permit name and all stops."""
     with Session.begin() as session:
         itineraries = session.scalars(select(Itinerary)).all()
         for i in itineraries:
             click.echo(f"=== {i.name} ({i.permit.name})")
-            click.echo(f"{i.ordered_divisions_str}\n")
+            click.echo(f"{i.ordered_divisions_str}")
+            click.echo()
 
 
 @cli.command()
@@ -227,7 +254,6 @@ def find_itineray_dates(start, end, reversable, itinerary_name) -> None:
         lotteries = itinerary.permit.lotteries
         relevant_lottery = None
         if len(lotteries) == 0:
-            # TODO: handle appropriately
             pass
         elif len(lotteries) == 1:
             relevant_lottery = lotteries[0]

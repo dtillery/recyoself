@@ -40,3 +40,7 @@ class Lottery(Base, table=True):
     announced_at: datetime
     access_start_at: datetime
     access_end_at: datetime
+
+    @property
+    def in_early_access(self):
+        return self.access_start_at < datetime.now() < self.access_end_at

@@ -83,15 +83,18 @@ class RecreationDotGov:
         division: Division,
         lottery: Optional[Lottery] = None,
     ) -> DivisionAvailability:
+
         fac_id = division.permit.facility_id
         div_id = division.division_id
         lottery_id = lottery and lottery.lottery_id or None
+        in_eap = lottery and lottery.in_early_access or False
         months = list(range(start_date.month, end_date.month + 1))
         year = start_date.year
+
         div_avail = DivisionAvailability(division)
         for month in months:
             availabilities_by_date = self._get_availabilities(
-                fac_id, div_id, lottery_id, month, year
+                fac_id, div_id, lottery_id, month, year, in_eap
             )
             for date, avail_data in availabilities_by_date.items():
                 date = dt.strptime(date, "%Y-%m-%d").date()
@@ -120,13 +123,14 @@ class RecreationDotGov:
         lottery_id: Optional["UUID"],
         month: int,
         year: int,
-        eap: bool = True,
+        in_eap: bool = True,
     ) -> dict:
-        avail_substr = eap and "eapavailability" or "availability"
+
+        avail_substr = in_eap and "eapavailability" or "availability"
         url = (
             f"permititinerary/{facility_id}/division/{division_id}/{avail_substr}/month"
         )
-        if lottery_id:
+        if lottery_id and in_eap:
             url = f"{url}/{lottery_id}"
         params = {"month": month, "year": year}
         return (
