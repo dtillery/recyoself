@@ -45,7 +45,8 @@ def cli(ctx) -> None:
 
 @cli.command()
 @click.option("--skip-download", type=bool, is_flag=True)
-def init(skip_download) -> None:
+@click.pass_context
+def init(ctx, skip_download) -> None:
     """Initialize the database and load initial entities from RIDB."""
     init_db()
     ridb = RIDB()
@@ -61,13 +62,17 @@ def init(skip_download) -> None:
             session.add(rec_area)
         for facility in ridb.make_facilities(session):
             session.add(facility)
+    ctx.invoke(load_lotteries)
 
 
 @cli.command()
-def drop() -> None:
+@click.pass_context
+def drop(ctx) -> None:
     """Drop the database."""
     if click.confirm("Do you want to drop the database?"):
         drop_db()
+    else:
+        ctx.abort()
 
 
 @cli.command()
@@ -151,7 +156,8 @@ def list_permits(search_string: str) -> None:
 @cli.command()
 @click.argument("permit_id")
 @click.argument("new_itinerary_name")
-def create_itinerary(permit_id, new_itinerary_name) -> None:
+@click.pass_context
+def create_itinerary(ctx, permit_id, new_itinerary_name) -> None:
     """Create a new, named itinerary for a given Permit (Facility)."""
     with Session.begin() as session:
         permit = session.scalars(
@@ -161,9 +167,14 @@ def create_itinerary(permit_id, new_itinerary_name) -> None:
             click.echo(click.style(f"No Permit found with ID {permit_id}.", fg="red"))
             return
 
+        if not permit.divisions:
+            if click.confirm(f'No divisions found for permit "{permit.name}". Load?'):
+                ctx.invoke(load_divisions, permit_id=permit_id)
+                session.refresh(permit)
+
         reservable_divisions = [d for d in permit.divisions if d.is_reservable]
         if not reservable_divisions:
-            click.echo("No reservable sites found. Did you run load-divisions?")
+            click.echo("No currently reservable sites found. :(")
             return
 
         choices = []
@@ -192,8 +203,6 @@ def create_itinerary(permit_id, new_itinerary_name) -> None:
             exact_match = [
                 d for d in matching_divisions if user_input.lower() == d.name.lower()
             ]
-            print(matching_divisions)
-            print(exact_match)
 
             if not matching_divisions:
                 click.echo(
