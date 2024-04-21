@@ -1,3 +1,6 @@
+# TODO: consider refactoring to multiple files
+# https://stackoverflow.com/questions/34643620/how-can-i-split-my-click-commands-each-with-a-set-of-sub-commands-into-multipl
+
 import datetime
 from datetime import timedelta
 from typing import TYPE_CHECKING
@@ -43,6 +46,7 @@ def cli(ctx) -> None:
 @cli.command()
 @click.option("--skip-download", type=bool, is_flag=True)
 def init(skip_download) -> None:
+    """Initialize the database and load initial entities from RIDB."""
     init_db()
     ridb = RIDB()
     if not skip_download:
@@ -61,12 +65,15 @@ def init(skip_download) -> None:
 
 @cli.command()
 def drop() -> None:
-    drop_db()
+    """Drop the database."""
+    if click.confirm("Do you want to drop the database?"):
+        drop_db()
 
 
 @cli.command()
 @click.argument("permit_id")
 def load_divisions(permit_id):
+    """Load divisions from rec.gov for a given Permit (Facility) ID"""
     with Session.begin() as session:
         permit_stmt = select(Facility).where(Facility.facility_id == permit_id)
         permit = session.scalars(permit_stmt).first()
@@ -80,6 +87,7 @@ def load_divisions(permit_id):
 
 @cli.command()
 def load_lotteries():
+    """Load all currently available lotteries from rec.gov"""
     with Session.begin() as session:
         rdg = RecreationDotGov()
         for lottery in rdg.make_lotteries(session):
@@ -144,6 +152,7 @@ def list_permits(search_string: str) -> None:
 @click.argument("permit_id")
 @click.argument("new_itinerary_name")
 def create_itinerary(permit_id, new_itinerary_name) -> None:
+    """Create a new, named itinerary for a given Permit (Facility)."""
     with Session.begin() as session:
         permit = session.scalars(
             select(Facility).where(Facility.facility_id == permit_id)
@@ -235,13 +244,32 @@ def find_availability_date_matches(
 
 
 @cli.command()
-@click.option("--start", "-s", type=click.DateTime(formats=["%Y-%m-%d"]), required=True)
-@click.option("--end", "-e", type=click.DateTime(formats=["%Y-%m-%d"]), required=True)
-@click.option("--reversable", "-r", type=bool, is_flag=True)
+@click.option(
+    "--start-date",
+    "-s",
+    type=click.DateTime(formats=["%Y-%m-%d"]),
+    required=True,
+    metavar="<YYYY-MM-DD>",
+)
+@click.option(
+    "--end-date",
+    "-e",
+    type=click.DateTime(formats=["%Y-%m-%d"]),
+    required=True,
+    metavar="<YYYY-MM-DD>",
+)
+@click.option(
+    "--reversable",
+    "-r",
+    type=bool,
+    is_flag=True,
+    help="Find availabilty for reversed-itinerary.",
+)
 @click.argument("itinerary_name")
-def find_itineray_dates(start, end, reversable, itinerary_name) -> None:
-    start = start.date()
-    end = end.date()
+def find_itineray_dates(start_date, end_date, reversable, itinerary_name) -> None:
+    """Find available booking dates for a named itinerary."""
+    start_date = start_date.date()
+    end_date = end_date.date()
     itinerary = None
     with Session.begin() as session:
         itinerary = session.scalars(
@@ -269,7 +297,9 @@ def find_itineray_dates(start, end, reversable, itinerary_name) -> None:
         division_availabilities: list[DivisionAvailability] = []
         for division in itinerary.divisions:
             division_availabilities.append(
-                rdg.make_availabilities(start, end, division, relevant_lottery)
+                rdg.make_availabilities(
+                    start_date, end_date, division, relevant_lottery
+                )
             )
 
         avail_matches = find_availability_date_matches(division_availabilities)
