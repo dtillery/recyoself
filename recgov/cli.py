@@ -69,10 +69,8 @@ def init(ctx, skip_download) -> None:
 @click.pass_context
 def drop(ctx) -> None:
     """Drop the database."""
-    if click.confirm("Do you want to drop the database?"):
+    if click.confirm("Do you want to drop the database?", abort=True):
         drop_db()
-    else:
-        ctx.abort()
 
 
 @cli.command()
@@ -194,8 +192,13 @@ def create_itinerary(ctx, permit_id, new_itinerary_name) -> None:
                 style=AUTOCOMPLETE_STYLE,
             ).ask()
 
-            if user_input in ["save", "cancel", None]:
+            if user_input == "save":
                 break
+            elif user_input in ("cancel", None):
+                ctx.abort()
+            elif user_input == "":
+                click.echo("Please provide an input.")
+                continue
 
             matching_divisions = [
                 d for d in reservable_divisions if user_input.lower() in d.name.lower()
@@ -225,8 +228,8 @@ def create_itinerary(ctx, permit_id, new_itinerary_name) -> None:
                     f"Current itinerary includes:\n{itinerary.ordered_divisions_str}"
                 )
 
-        if user_input is None or user_input == "cancel" or itinerary is None:
-            click.echo("Not saving itinerary.")
+        if itinerary is None:
+            click.echo("No divisions selected, not saving itinerary.")
         elif not itinerary.divisions:
             click.echo("No divisions added, not creating itinerary.")
         else:
@@ -275,7 +278,8 @@ def find_availability_date_matches(
     help="Find availabilty for reversed-itinerary.",
 )
 @click.argument("itinerary_name")
-def find_itineray_dates(start_date, end_date, reversable, itinerary_name) -> None:
+@click.pass_context
+def find_itineray_dates(ctx, start_date, end_date, reversable, itinerary_name) -> None:
     """Find available booking dates for a named itinerary."""
     start_date = start_date.date()
     end_date = end_date.date()
@@ -301,6 +305,8 @@ def find_itineray_dates(start_date, end_date, reversable, itinerary_name) -> Non
                 title = f"{l.name}"
                 choices.append(qu.Choice(title, value=l))
             relevant_lottery = qu.select(question, choices=choices).ask()
+            if relevant_lottery is None:
+                ctx.abort()
 
         rdg = RecreationDotGov()
         division_availabilities: list[DivisionAvailability] = []
