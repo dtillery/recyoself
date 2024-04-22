@@ -7,9 +7,9 @@ from typing import TYPE_CHECKING
 
 import click
 import questionary as qu
-from prompt_toolkit.styles import Style
 from sqlmodel import col, select
 
+from . import AUTOCOMPLETE_STYLE
 from .db import Session, drop_db, init_db
 from .models import Facility, FacilityType, Itinerary, Lottery, Organization
 from .recreationdotgov import RecreationDotGov
@@ -17,22 +17,6 @@ from .ridb import RIDB
 
 if TYPE_CHECKING:
     from .division_availability import DivisionAvailability
-
-
-# stolen from https://github.com/tmbo/questionary/blob/master/examples/autocomplete_ants.py
-AUTOCOMPLETE_STYLE = Style(
-    [
-        ("separator", "fg:#cc5454"),
-        ("qmark", "fg:#673ab7 bold"),
-        ("question", ""),
-        ("selected", "fg:#cc5454"),
-        ("pointer", "fg:#673ab7 bold"),
-        ("highlighted", "fg:#673ab7 bold"),
-        ("answer", "fg:#f44336 bold"),
-        ("text", "fg:#FBE9E7"),
-        ("disabled", "fg:#858585 italic"),
-    ]
-)
 
 
 @click.group(chain=True)
