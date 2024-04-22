@@ -33,10 +33,12 @@ def init(ctx, skip_download) -> None:
     init_db()
     ridb = RIDB()
     if not skip_download:
-        print(f"=== Fetching RIDB entities full-export CSVs...")
+        click.secho(
+            f"Fetching RIDB entities full-export CSVs...", bold=True, underline=True
+        )
         ridb.fetch_entities()
     with Session.begin() as session:
-        print(f"=== Loading entities into database...")
+        click.secho(f"Loading entities into database...", bold=True, underline=True)
         for organization in ridb.make_organizations():
             session.add(organization)
         session.add(ridb.make_org_157())
@@ -63,7 +65,7 @@ def load_divisions(permit_id):
         permit_stmt = select(Facility).where(Facility.facility_id == permit_id)
         permit = session.scalars(permit_stmt).first()
         if not permit:
-            raise Exception(f"Could not find permit with ID {permit_id}")
+            raise ValueError(f"Could not find permit with ID {permit_id}")
 
         rdg = RecreationDotGov()
         for division in rdg.make_permit_divisions(permit):
@@ -96,12 +98,16 @@ def list_lotteries(search_string: str) -> None:
             )
         lotteries = session.scalars(stmt).all()
         for l in lotteries:
-            click.echo(f"=== {l.name}: {l.desc}")
-            click.echo(f"{l.lottery_id}")
+            open_at = f"{l.open_at.date():%-m/%-d/%y}"
+            close_at = f"{l.close_at.date():%-m/%-d/%y}"
+            access_start = f"{l.access_start_at.date():%-m/%-d/%y}"
+            access_end = f"{l.access_end_at.date():%-m/%-d/%y}"
+            click.secho(f"{l.name}: {l.desc}", bold=True, underline=True)
+            click.echo(f"UUID: {l.lottery_id}")
             click.echo(f"Facility: {l.facility.name} ({l.facility.facility_id})")
-            click.echo(f"Status: {l.status.name}")
-            click.echo(f"Open: {l.open_at.date()} - {l.close_at.date()}")
-            click.echo(f"Access: {l.access_start_at.date()} - {l.access_end_at.date()}")
+            click.echo(f"Status: {l.status.name.title()}")
+            click.echo(f"Open From: {open_at} => {close_at}")
+            click.echo(f"Winners Access From: {access_start} => {access_end}")
             click.echo()
 
 
@@ -111,7 +117,7 @@ def list_itineraries() -> None:
     with Session.begin() as session:
         itineraries = session.scalars(select(Itinerary)).all()
         for i in itineraries:
-            click.echo(f"=== {i.name} ({i.permit.name})")
+            click.secho(f"{i.name} ({i.permit.name})", bold=True, underline=True)
             click.echo(f"{i.ordered_divisions_str}")
             click.echo()
 
@@ -130,7 +136,13 @@ def list_permits(search_string: str) -> None:
             stmt = stmt.where(col(Facility.name).icontains(search_string))
         permits = session.scalars(stmt).all()
         for p in permits:
-            click.echo(f"{p.facility_id}: {p.name}")
+            click.secho(f"{p.name} ({p.facility_id})", bold=True, underline=True)
+            if p.rec_area:
+                click.echo(
+                    f"Rec Area: {p.rec_area.name} ({p.rec_area.org_rec_area_id})"
+                )
+            click.echo(f"Org: {p.org.name} ({p.org.abbr})")
+            click.echo()
 
 
 @cli.command()
@@ -250,6 +262,18 @@ def find_availability_date_matches(
     return matching_avail_dates
 
 
+def print_availability_matches(
+    avail_matches: list[list[tuple["DivisionAvailability", datetime.date]]]
+) -> None:
+    for match in avail_matches:
+        first_day = f"{match[0][1]:%a, %b %-d}"
+        last_day = f"{match[-1][1]:%a, %b %-d}"
+        click.secho(f"{first_day} - {last_day}", bold=True)
+        click.echo(
+            "\n".join([f"{i[1]:%-m/%-d/%y}: {i[0].division.name}" for i in match])
+        )
+
+
 @cli.command()
 @click.option(
     "--start-date",
@@ -313,7 +337,6 @@ def find_itinerary_dates(ctx, start_date, end_date, reversable, itinerary_name) 
             )
 
         avail_matches = find_availability_date_matches(division_availabilities)
-
         avail_matches_reversed = []
         if reversable:
             avail_matches_reversed = find_availability_date_matches(
@@ -321,23 +344,25 @@ def find_itinerary_dates(ctx, start_date, end_date, reversable, itinerary_name) 
             )
 
         if not (avail_matches or avail_matches_reversed):
-            click.echo("No possible matches found for given campsites. :(")
+            click.secho(
+                "No possible date matches found for itinerary. :(", fg="red", bold=True
+            )
         else:
-            click.echo(f"{len(avail_matches)} possible matches found:")
-            for match in avail_matches:
-                click.echo(
-                    " > ".join([f"{i[0].division.name} ({i[1]:%b %d})" for i in match])
-                )
+            click.secho(
+                f"{len(avail_matches)} date matches found:",
+                bold=True,
+                underline=True,
+                fg="green",
+            )
+            print_availability_matches(avail_matches)
             if reversable:
-                click.echo(
-                    f"{len(avail_matches_reversed)} possible reversed-matches found:"
+                click.secho(
+                    f"{len(avail_matches_reversed)} reversed-itinerary date matches found:",
+                    bold=True,
+                    underline=True,
+                    fg="green",
                 )
-                for match in avail_matches_reversed:
-                    click.echo(
-                        " > ".join(
-                            [f"{i[0].division.name} ({i[1]:%b %d})" for i in match]
-                        )
-                    )
+                print_availability_matches(avail_matches_reversed)
 
 
 if __name__ == "__main__":
