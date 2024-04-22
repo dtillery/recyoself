@@ -26,7 +26,12 @@ def cli(ctx) -> None:
 
 
 @cli.command()
-@click.option("--skip-download", type=bool, is_flag=True)
+@click.option(
+    "--skip-download",
+    type=bool,
+    is_flag=True,
+    help="Use cached files from a previous run.",
+)
 @click.pass_context
 def init(ctx, skip_download) -> None:
     """Initialize the database and load initial entities from RIDB."""
@@ -82,19 +87,19 @@ def load_lotteries():
 
 
 @cli.command()
-@click.argument("search_string", type=str, default="")
-def list_lotteries(search_string: str) -> None:
+@click.argument("search_substring", type=str, default="")
+def list_lotteries(search_substring: str) -> None:
     """List all Lotteries saved in the database.
 
-    Optionally provide SEARCH_STRING to filter based on a case-insensitive
+    Optionally provide SEARCH_SUBSTRING to filter based on a case-insensitive
     search of the lottery's name and description.
     """
     with Session.begin() as session:
         stmt = select(Lottery)
-        if search_string:
+        if search_substring:
             stmt = stmt.where(
-                (col(Lottery.name).icontains(search_string))
-                | (col(Lottery.desc).icontains(search_string))
+                (col(Lottery.name).icontains(search_substring))
+                | (col(Lottery.desc).icontains(search_substring))
             )
         lotteries = session.scalars(stmt).all()
         for l in lotteries:
@@ -123,17 +128,17 @@ def list_itineraries() -> None:
 
 
 @cli.command()
-@click.argument("search_string", type=str, default="")
-def list_permits(search_string: str) -> None:
+@click.argument("search_substring", type=str, default="")
+def list_permits(search_substring: str) -> None:
     """List all Facilities that are of the permit type.
 
-    Optionally provide SEARCH_STRING to filter based on a case-insensitive
+    Optionally provide SEARCH_SUBSTRING to filter based on a case-insensitive
     search of the permit's name.
     """
     with Session.begin() as session:
         stmt = select(Facility).where(Facility.type == FacilityType.permit)
-        if search_string:
-            stmt = stmt.where(col(Facility.name).icontains(search_string))
+        if search_substring:
+            stmt = stmt.where(col(Facility.name).icontains(search_substring))
         permits = session.scalars(stmt).all()
         for p in permits:
             click.secho(f"{p.name} ({p.facility_id})", bold=True, underline=True)
@@ -187,7 +192,7 @@ def create_itinerary(ctx, permit_id, new_itinerary_name) -> None:
         while True:
             # qu modifies meta_info inplace, so we need a copy. shallow is fine.
             user_input = qu.autocomplete(
-                "Choose a division",
+                "Choose a division:",
                 choices=list(meta_info.keys()),
                 meta_information=meta_info.copy(),
                 ignore_case=True,
