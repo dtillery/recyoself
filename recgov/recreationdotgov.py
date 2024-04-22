@@ -133,10 +133,11 @@ class RecreationDotGov:
         if lottery_id and in_eap:
             url = f"{url}/{lottery_id}"
         params = {"month": month, "year": year}
-        return (
-            self._get(url, params=params)
-            .get("quota_type_maps", {})
-            .get("QuotaUsageBySiteDaily", {})
+        quotas = self._get(url, params=params).get("quota_type_maps", {})
+        # not entirely clear when it's one map type or the other
+        # QuotaUsageByMemberDaily also exists for tracking total people
+        return quotas.get("QuotaUsageBySiteDaily", {}) or quotas.get(
+            "ConstantQuotaUsageDaily", {}
         )
 
     def _get(self, endpoint: str, params: Optional[dict] = None) -> dict:
