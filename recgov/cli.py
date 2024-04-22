@@ -157,17 +157,25 @@ def create_itinerary(ctx, permit_id, new_itinerary_name) -> None:
             click.echo("No currently reservable sites found. :(")
             return
 
-        choices = []
-        meta_info = {}
+        meta_info = {
+            "list": "List available choices.",
+            "save": "Save the constructed itinerary.",
+            "cancel": "Exit without saving itinerary.",
+        }
         for d in reservable_divisions:
-            choices.append(d.name)
             meta_info[d.name] = f"{d.type}, {d.district}"
 
         itinerary, curr_itinerary_str, user_input = None, None, None
+        click.secho(
+            "Begin typing and make a selection to add it to your itinerary.", bold=True
+        )
+        click.secho('=> "save" to save itinerary as currently constructed')
+        click.secho('=> "cancel" to exit without saving the current itinerary')
+        click.secho('=> "list" to list all division autocomplete options')
         while True:
             user_input = qu.autocomplete(
-                'Begin typing and make a selection to add to your itinerary ("save" to save, "cancel" to cancel)\n',
-                choices=choices,
+                "Choose a division",
+                choices=meta_info.keys(),
                 meta_information=meta_info,
                 ignore_case=True,
                 match_middle=True,
@@ -181,6 +189,10 @@ def create_itinerary(ctx, permit_id, new_itinerary_name) -> None:
             elif user_input == "":
                 click.echo("Please provide an input.")
                 continue
+            elif user_input == "list":
+                click.echo_via_pager(
+                    f"{d.name} ({d.type}, {d.district})\n" for d in reservable_divisions
+                )
 
             matching_divisions = [
                 d for d in reservable_divisions if user_input.lower() in d.name.lower()
@@ -261,7 +273,7 @@ def find_availability_date_matches(
 )
 @click.argument("itinerary_name")
 @click.pass_context
-def find_itineray_dates(ctx, start_date, end_date, reversable, itinerary_name) -> None:
+def find_itinerary_dates(ctx, start_date, end_date, reversable, itinerary_name) -> None:
     """Find available booking dates for a named itinerary."""
     start_date = start_date.date()
     end_date = end_date.date()
