@@ -175,7 +175,7 @@ def create_itinerary(ctx, permit_id, new_itinerary_name) -> None:
         while True:
             user_input = qu.autocomplete(
                 "Choose a division",
-                choices=meta_info.keys(),
+                choices=list(meta_info.keys()),
                 meta_information=meta_info,
                 ignore_case=True,
                 match_middle=True,
