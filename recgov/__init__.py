@@ -1,9 +1,6 @@
 import os
 
-from dotenv import load_dotenv
 from platformdirs import PlatformDirs
-
-load_dotenv()
 
 if os.environ.get("RECGOV_ENV") == "dev":
     USER_DATA_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../data"))

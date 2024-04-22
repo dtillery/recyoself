@@ -9,11 +9,9 @@ readme = "README.md"
 python = "^3.12"
 requests = "^2.31.0"
 click = "^8.1.7"
-python-dotenv = "^1.0.1"
 tqdm = "^4.66.2"
 sqlmodel = "^0.0.16"
 platformdirs = "^4.2.0"
-aenum = "^3.1.15"
 questionary = "^2.0.1"
 
 [tool.poetry.scripts]

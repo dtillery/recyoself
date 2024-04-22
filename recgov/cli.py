@@ -7,7 +7,6 @@ from typing import TYPE_CHECKING
 
 import click
 import questionary as qu
-from dotenv import load_dotenv
 from prompt_toolkit.styles import Style
 from sqlmodel import col, select
 
@@ -19,7 +18,6 @@ from .ridb import RIDB
 if TYPE_CHECKING:
     from .division_availability import DivisionAvailability
 
-load_dotenv()
 
 # stolen from https://github.com/tmbo/questionary/blob/master/examples/autocomplete_ants.py
 AUTOCOMPLETE_STYLE = Style(
@@ -184,7 +182,7 @@ def create_itinerary(ctx, permit_id, new_itinerary_name) -> None:
         itinerary, curr_itinerary_str, user_input = None, None, None
         while True:
             user_input = qu.autocomplete(
-                'Begin typing and make selection to add to your itinerary ("save" to save, "cancel" to cancel)\n',
+                'Begin typing and make a selection to add to your itinerary ("save" to save, "cancel" to cancel)\n',
                 choices=choices,
                 meta_information=meta_info,
                 ignore_case=True,
