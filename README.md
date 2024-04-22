@@ -18,12 +18,23 @@ recgov init
 Data is stored based on [platformdirs](https://github.com/platformdirs/platformdirs). On
 a Mac it will likely be located at `~/Library/Application\ Support/recgov`.
 
-## Upgrade
+### Upgrade
 ```bash
 pipx reinstall recgov
 ```
 
 This will not clear the database.
+
+## Configuration
+There's not much configuration right now to speak of.
+
+### Environment Variables
+I recommend managing these locally with like [direnv](https://direnv.net).
+
+#### `RECGOV_ENV`
+If this is set to `dev`, the entity CSVs and database will be saved in the package's
+`data/` directory. Useful if you're doing development and want to inspect the database
+easily.
 
 ## Usage
 All subcommands are accessible under the `recgov` command. All support `--help` to list
