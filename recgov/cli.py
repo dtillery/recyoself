@@ -173,10 +173,11 @@ def create_itinerary(ctx, permit_id, new_itinerary_name) -> None:
         click.secho('=> "cancel" to exit without saving the current itinerary')
         click.secho('=> "list" to list all division autocomplete options')
         while True:
+            # qu modifies meta_info inplace, so we need a copy. shallow is fine.
             user_input = qu.autocomplete(
                 "Choose a division",
                 choices=list(meta_info.keys()),
-                meta_information=meta_info,
+                meta_information=meta_info.copy(),
                 ignore_case=True,
                 match_middle=True,
                 style=AUTOCOMPLETE_STYLE,
