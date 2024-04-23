@@ -135,7 +135,11 @@ def list_campsites(ctx, facility_id: str) -> None:
             .order_by(Campsite.loop)
         )
         cs_results = session.scalars(cs_stmt)
-        click.secho(f"Campsites at {facility.name}:", bold=True, underline=True)
+        click.secho(
+            f"Campsites at {facility.name} ({facility.facility_id}):",
+            bold=True,
+            underline=True,
+        )
         for c in cs_results.all():
             group = c.group_site and "Group " or ""
             electric = c.electric and "Electric" or "Non-Electric"
