@@ -33,6 +33,10 @@ class FacilityType(str, Enum):
     reservation = "Venue Reservations"
     visitor_center = "Visitor Center"
 
+    @property
+    def pretty_name(self):
+        return self.name.replace("_", " ").title()
+
 
 class Facility(Base, table=True):
     name: str

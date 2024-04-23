@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 
 import click
 import questionary as qu
-from sqlmodel import col, select
+from sqlmodel import col, or_, select
 
 from . import AUTOCOMPLETE_STYLE
 from .db import Session, drop_db, init_db
@@ -34,7 +34,7 @@ def cli(ctx) -> None:
 )
 @click.pass_context
 def init(ctx, skip_download) -> None:
-    """Initialize the database and load initial entities from RIDB."""
+    """Initialize the database and load initial entities from RIDB/Rec.gov."""
     init_db()
     ridb = RIDB()
     if not skip_download:
@@ -128,20 +128,35 @@ def list_itineraries() -> None:
 
 
 @cli.command()
+@click.option(
+    "-t",
+    "--type",
+    "ftypes",
+    multiple=True,
+    type=click.Choice([f.name for f in FacilityType], case_sensitive=False),
+)
 @click.argument("search_substring", type=str, default="")
-def list_permits(search_substring: str) -> None:
-    """List all Facilities that are of the permit type.
+def list_facilities(ftypes: tuple[str], search_substring: str) -> None:
+    """List all Facilities and relevant information, listed alphabetically by type and name.
+
+    Optionally provide "--type" one or more times to filter by FacilityType(s).
 
     Optionally provide SEARCH_SUBSTRING to filter based on a case-insensitive
     search of the permit's name.
     """
     with Session.begin() as session:
-        stmt = select(Facility).where(Facility.type == FacilityType.permit)
+        stmt = select(Facility).order_by(Facility.type, Facility.name)
+        if ftypes:
+            stmt = stmt.where(or_(Facility.type == FacilityType[t] for t in ftypes))  # type: ignore
         if search_substring:
             stmt = stmt.where(col(Facility.name).icontains(search_substring))
         permits = session.scalars(stmt).all()
         for p in permits:
-            click.secho(f"{p.name} ({p.facility_id})", bold=True, underline=True)
+            click.secho(
+                f"{p.type.pretty_name}: {p.name} ({p.facility_id})",
+                bold=True,
+                underline=True,
+            )
             if p.rec_area:
                 click.echo(
                     f"Rec Area: {p.rec_area.name} ({p.rec_area.org_rec_area_id})"

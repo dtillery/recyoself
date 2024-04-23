@@ -84,15 +84,21 @@ fresh or after a `drop`.***
 >> recgov load-divisions 4675321
 ```
 
-### `list-permits SEARCH_SUBSTRING`
+### `list-facilities [OPTIONS] SEARCH_SUBSTRING`
 Print all Facilities of type "permit" with relevant information. Optionally provide a
-(currenlty single word) substring argument to filter results based on the permit's name.
+`--type` argument one or multiple times to filter facilities by their type (see FacilityType
+for options). Optionally provide a (currenlty single word) substring argument to filter
+results based on the permit's name.
 
 ```bash
-# find all permits containing "rainier"
->> recgov list-permits rainier
-Mount Rainier National Park Wilderness and Climbing Permits (4675317)
-Rec Area: Mount Rainier National Park (MORA)
+# find all permits and campgrounds containing "rainier"
+>> recgov list-facilities --type permit --type campground glacier
+Campground: Exit Glacier Campground (248555)
+Rec Area: Kenai Fjords National Park (KEFJ)
+Org: National Park Service (NPS)
+...
+Permit: Glacier National Park Wilderness Permits (4675321)
+Rec Area: Glacier National Park (GLAC)
 Org: National Park Service (NPS)
 ```
 
