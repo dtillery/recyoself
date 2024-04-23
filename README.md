@@ -234,3 +234,50 @@ this is often associated with "campsites" (such as for wilderness permits), it c
 mean something like a zone you are entering at a specific date (for example, the Core Zone
 in the Enchantments). It essentially seems like the idea was that many things can be divided
 up, and therefore those parts are "divisions".
+
+### Campsite
+Campsites that belong to a Facility. Can be car-camping, cabin, tents, boat-in, etc. There
+are many different types and often have "GROUP" and "ELECTRIC"/"NONELECTRIC" variants.
+Currently here are the types we've seen:
+
+* `ANCHORAGE`
+* `BALL FIELD`
+* `BOAT IN`
+* `CABIN ELECTRIC`
+* `CABIN NONELECTRIC`
+* `Designated Campsite`
+* `EQUESTRIAN ELECTRIC`
+* `EQUESTRIAN NONELECTRIC`
+* `GROUP EQUESTRIAN`
+* `GROUP HIKE TO`
+* `GROUP PICNIC AREA`
+* `GROUP RV AREA NONELECTRIC`
+* `GROUP SHELTER ELECTRIC`
+* `GROUP SHELTER NONELECTRIC`
+* `GROUP STANDARD AREA ELECTRIC`
+* `GROUP STANDARD AREA NONELECTRIC`
+* `GROUP STANDARD ELECTRIC`
+* `GROUP STANDARD NONELECTRIC`
+* `GROUP TENT ONLY AREA NONELECTRIC`
+* `GROUP WALK TO`
+* `HIKE TO`
+* `LOOKOUT`
+* `MANAGEMENT`
+* `MOORING`
+* `OVERNIGHT SHELTER ELECTRIC`
+* `OVERNIGHT SHELTER NONELECTRIC`
+* `PARKING`
+* `PICNIC`
+* `RV ELECTRIC`
+* `RV NONELECTRIC`
+* `SHELTER ELECTRIC`
+* `SHELTER NONELECTRIC`
+* `STANDARD ELECTRIC`
+* `STANDARD NONELECTRIC`
+* `TENT ONLY ELECTRIC`
+* `TENT ONLY NONELECTRIC`
+* `WALK TO`
+* `YES`
+* `YURT`
+* `Zone`
+* `` (empty)

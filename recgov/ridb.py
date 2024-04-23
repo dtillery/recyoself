@@ -10,7 +10,7 @@ from tqdm import tqdm
 
 from recgov import USER_DATA_DIR
 
-from .models import Facility, Organization, RecreationArea
+from .models import Campsite, Facility, Organization, RecreationArea
 
 if TYPE_CHECKING:
     from sqlalchemy.orm import Session
@@ -85,10 +85,50 @@ class RIDB:
 
             yield Facility(org=org, rec_area=rec_area, **kwargs)
 
+    def make_campsites(self, session: "Session") -> Iterator[Campsite]:
+        for data in self._read_csv("Campsites"):
+            campsite_type, electric, group_site = self._parse_campsite_type(
+                data["CampsiteType"]
+            )
+            kwargs = {
+                "name": data["CampsiteName"],
+                "loop": data.get("Loop"),
+                "campsite_id": data["CampsiteID"],
+                "type": campsite_type,
+                "electric": electric,
+                "group_site": group_site,
+                "use": data["TypeOfUse"],
+            }
+            facility_stmt = select(Facility).where(
+                Facility.facility_id == data["FacilityID"]
+            )
+            facility = session.scalars(facility_stmt).first()
+
+            yield Campsite(facility=facility, **kwargs)
+
     def fetch_entities(self) -> None:
         with NamedTemporaryFile(delete_on_close=False) as tempf:
             self._download_zip(tempf)
             self._extract_entities(tempf)
+
+    def _parse_campsite_type(self, type_str: str) -> tuple[str, bool, bool]:
+        electric = False
+        group_site = False
+        type_parts = type_str.split(" ")
+
+        if type_parts[-1] in ["ELECTRIC", "NONELECTRIC"]:
+            # determine electric and remove from parts
+            electric = type_parts.pop() == "ELECTRIC"
+
+        if type_parts[0] == "GROUP":
+            # determine if group site and remove
+            group_site = True
+            del type_parts[0]
+            if "AREA" in type_parts and type_parts != ["STANDARD", "AREA"]:
+                # keep AREA if it's STANDARD AREA
+                type_parts.remove("AREA")
+
+        return " ".join(type_parts), electric, group_site
 
     def _download_zip(self, destination: IO[Any]) -> None:
         response = requests.get(self.entities_csv_zip_url, stream=True)

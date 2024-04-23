@@ -11,7 +11,7 @@ from sqlmodel import col, or_, select
 
 from . import AUTOCOMPLETE_STYLE
 from .db import Session, drop_db, init_db
-from .models import Facility, FacilityType, Itinerary, Lottery, Organization
+from .models import Campsite, Facility, FacilityType, Itinerary, Lottery, Organization
 from .recreationdotgov import RecreationDotGov
 from .ridb import RIDB
 
@@ -51,6 +51,8 @@ def init(ctx, skip_download) -> None:
             session.add(rec_area)
         for facility in ridb.make_facilities(session):
             session.add(facility)
+        for campsite in ridb.make_campsites(session):
+            session.add(campsite)
     ctx.invoke(load_lotteries)
 
 
@@ -114,6 +116,32 @@ def list_lotteries(search_substring: str) -> None:
             click.echo(f"Open From: {open_at} => {close_at}")
             click.echo(f"Winners Access From: {access_start} => {access_end}")
             click.echo()
+
+
+@cli.command()
+@click.argument("facility_id")
+@click.pass_context
+def list_campsites(ctx, facility_id: str) -> None:
+    """List all campsites associated with a given RIDB Facility ID"""
+    with Session.begin() as session:
+        facility_stmt = select(Facility).where(Facility.facility_id == facility_id)
+        facility = session.scalars(facility_stmt).first()
+        if not facility:
+            raise ValueError(f"Could not find Facility with ID {facility_id}")
+
+        cs_stmt = (
+            select(Campsite)
+            .where(Campsite.facility == facility)
+            .order_by(Campsite.loop)
+        )
+        cs_results = session.scalars(cs_stmt)
+        click.secho(f"Campsites at {facility.name}:", bold=True, underline=True)
+        for c in cs_results.all():
+            group = c.group_site and "Group " or ""
+            electric = c.electric and "Electric" or "Non-Electric"
+            click.echo(
+                f"{c.campsite_id}: {c.name} ({c.loop}), {group}{c.type.pretty_name}, {electric}, {c.use.pretty_name}"
+            )
 
 
 @cli.command()

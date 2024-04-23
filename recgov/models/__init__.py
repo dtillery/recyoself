@@ -1,3 +1,4 @@
+from .campsite import Campsite
 from .division import Division
 from .facility import Facility, FacilityType
 from .itinerary import Itinerary

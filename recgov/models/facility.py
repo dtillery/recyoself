@@ -1,12 +1,12 @@
-from enum import Enum
 from typing import TYPE_CHECKING, Optional
 
 import sqlalchemy as sa
 from sqlmodel import Field, Relationship
 
-from .base import Base
+from .base import Base, BaseEnum
 
 if TYPE_CHECKING:
+    from .campsite import Campsite
     from .division import Division
     from .itinerary import Itinerary
     from .lottery import Lottery
@@ -14,7 +14,7 @@ if TYPE_CHECKING:
     from .recreation_area import RecreationArea
 
 
-class FacilityType(str, Enum):
+class FacilityType(str, BaseEnum):
     activity_pass = "Activity Pass"
     archives = "Archives"
     campground = "Campground"
@@ -53,3 +53,4 @@ class Facility(Base, table=True):
     itineraries: list["Itinerary"] = Relationship(back_populates="permit")
     divisions: list["Division"] = Relationship(back_populates="permit")
     lotteries: list["Lottery"] = Relationship(back_populates="facility")
+    campsites: list["Campsite"] = Relationship(back_populates="facility")

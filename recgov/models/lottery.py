@@ -1,22 +1,21 @@
 from datetime import datetime
-from enum import Enum
 from typing import TYPE_CHECKING
 from uuid import UUID
 
 from sqlmodel import Field, Relationship
 
-from .base import Base
+from .base import Base, BaseEnum
 
 if TYPE_CHECKING:
     from .facility import Facility
 
 
-class LotteryStatus(str, Enum):
+class LotteryStatus(str, BaseEnum):
     active = "LotteryStatusActive"
     executed = "LotteryStatusExecuted"
 
 
-class LotteryType(str, Enum):
+class LotteryType(str, BaseEnum):
     queue_lottery = "queuelottery"
     camping = "camping"
     ticket = "ticket"
