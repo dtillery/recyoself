@@ -53,3 +53,9 @@ class Campsite(Base, table=True):
     use: UseType = Field(sa_column=sa.Column(sa.Enum(UseType, create_constraint=True)))
     facility_id: int = Field(foreign_key="facility.id")
     facility: "Facility" = Relationship(back_populates="campsites")
+
+    @property
+    def combined_type(self):
+        group = self.group_site and "Group " or ""
+        electric = self.electric and "Electric" or "Non-Electric"
+        return f"{group}{self.type.pretty_name}, {electric}"

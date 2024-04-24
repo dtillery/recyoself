@@ -3,7 +3,7 @@
 
 import datetime
 from datetime import timedelta
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 import click
 import questionary as qu
@@ -144,7 +144,7 @@ def list_campsites(ctx, facility_id: str) -> None:
             group = c.group_site and "Group " or ""
             electric = c.electric and "Electric" or "Non-Electric"
             click.echo(
-                f"{c.campsite_id}: {c.name} ({c.loop}), {group}{c.type.pretty_name}, {electric}, {c.use.pretty_name}"
+                f"{c.campsite_id}: {c.name} ({c.loop}), {c.combined_type}, {c.use.pretty_name}"
             )
 
 
@@ -298,7 +298,7 @@ def create_itinerary(ctx, permit_id, new_itinerary_name) -> None:
             session.add(itinerary)
 
 
-def find_availability_date_matches(
+def find_division_availability_date_matches(
     availabilities: list["DivisionAvailability"],
 ) -> list[list[tuple["DivisionAvailability", datetime.date]]]:
     # TODO: make this not dumb
@@ -383,15 +383,15 @@ def find_itinerary_dates(ctx, start_date, end_date, reversable, itinerary_name) 
         division_availabilities: list[DivisionAvailability] = []
         for division in itinerary.divisions:
             division_availabilities.append(
-                rdg.make_availabilities(
+                rdg.make_division_availabilities(
                     start_date, end_date, division, relevant_lottery
                 )
             )
 
-        avail_matches = find_availability_date_matches(division_availabilities)
+        avail_matches = find_division_availability_date_matches(division_availabilities)
         avail_matches_reversed = []
         if reversable:
-            avail_matches_reversed = find_availability_date_matches(
+            avail_matches_reversed = find_division_availability_date_matches(
                 division_availabilities[::-1]
             )
 
@@ -415,6 +415,80 @@ def find_itinerary_dates(ctx, start_date, end_date, reversable, itinerary_name) 
                     fg="green",
                 )
                 print_availability_matches(avail_matches_reversed)
+
+
+@cli.command()
+@click.option(
+    "--start-date",
+    "-s",
+    "start",
+    type=click.DateTime(formats=["%Y-%m-%d"]),
+    required=True,
+    metavar="<YYYY-MM-DD>",
+)
+@click.option(
+    "--end-date",
+    "-e",
+    "end",
+    type=click.DateTime(formats=["%Y-%m-%d"]),
+    metavar="<YYYY-MM-DD>",
+)
+@click.option(
+    "--include-nyr",
+    "nyr",
+    type=bool,
+    is_flag=True,
+    help="Include sites and dates that are Not Yet Reservable",
+)
+@click.argument("campground_id", type=str)
+@click.argument("num_days", type=int)
+@click.pass_context
+def find_campsite_dates(
+    ctx,
+    start: datetime.datetime,
+    end: Optional[datetime.datetime],
+    nyr: bool,
+    campground_id: str,
+    num_days: int,
+):
+    start_date = start.date()
+    end_date = end and end.date() or start.date()
+    end_of_trip_date = end_date + timedelta(days=num_days)
+
+    with Session.begin() as session:
+        stmt = select(Facility).where(Facility.facility_id == campground_id)
+        campground = session.scalars(stmt).first()
+        if not campground:
+            raise ValueError(
+                f"Could not find Campground (Facility) with ID {campground_id}"
+            )
+
+        rdg = RecreationDotGov()
+        click.secho(
+            f"{campground.name}: {num_days}-day availabilities from {start_date:%b %-d} to {end_date:%b %-d})",
+            bold=True,
+            underline=True,
+        )
+        for ca in rdg.make_campsite_availabilities(
+            start_date, end_of_trip_date, campground
+        ):
+            reservable_blocks = ca.find_reservable_blocks(num_days, include_nyr=nyr)
+            if reservable_blocks:
+                cs = session.scalars(
+                    select(Campsite).where(Campsite.campsite_id == ca.campsite_id)
+                ).first()
+                if cs:
+                    click.secho(
+                        f"Site {cs.name} ({cs.loop}): {cs.combined_type}, starting on:",
+                        bold=True,
+                    )
+                    for date, curr_avail in reservable_blocks:
+                        s = f"{date:%a, %b %-d}"
+                        color = "green"
+                        if not curr_avail:
+                            s += " (NYR)"
+                            color = "yellow"
+                        click.secho(s, fg=color)
 
 
 if __name__ == "__main__":

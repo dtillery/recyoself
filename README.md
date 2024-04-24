@@ -203,6 +203,33 @@ Mon, Jun 24 - Wed, Jun 26
 6/26/24: Happy Four
 ```
 
+### `find-campsite-dates [OPTIONS] CAMPGROUND_ID NUM_DAYS`
+For a given Campground (Facility) ID, find all starting dates for a reservation of length
+NUM_DAYS. Options include:
+
+* `-s, --start-date`: The day to start searching for reservation blocks. This is always required.
+* `-e, --end-date`: The last day to search for a reservation blocks. This is optional, and
+if it is not supplied only the given start-date will be used.
+* `--include-nyr`: Include campsites that are Not Yet Reservable (but may become so at a
+later date) in the results.
+
+```bash
+>> recgov find-campsite-dates -s 2024-09-01 -e 2024-09-30 --include-nyr 247592 2
+Hoh Rainforest Campground: 2-day availabilities from Sep 1 to Sep 30)
+Site 1 (A): Standard, Non-Electric, starting on:
+Wed, Sep 11
+Sun, Sep 15
+Mon, Sep 16
+Tue, Sep 17
+Wed, Sep 18
+Site 32 (A): Standard, Non-Electric, starting on:
+Tue, Sep 17
+Site 39 (B): Standard, Non-Electric, starting on:
+Sun, Sep 1 (NYR)
+Mon, Sep 2 (NYR)
+...
+```
+
 ## Terminology
 Terms used here are often based on their counterparts from RIDB and Rec.gov. While some
 attempts and using more "friendly" language have been made, often the underlying models
@@ -280,4 +307,4 @@ Currently here are the types we've seen:
 * `YES`
 * `YURT`
 * `Zone`
-* `` (empty)
+* ` ` (empty)

@@ -8,6 +8,7 @@ from tqdm import tqdm
 
 from recgov import HEADERS
 
+from .campsite_availability import CampsiteAvailability
 from .division_availability import DivisionAvailability
 from .models import Division, Facility, Lottery
 
@@ -76,7 +77,7 @@ class RecreationDotGov:
                 yield Lottery(facility=facility, **kwargs)
                 progress_bar.update()
 
-    def make_availabilities(
+    def make_division_availabilities(
         self,
         start_date: datetime.date,
         end_date: datetime.date,
@@ -93,7 +94,7 @@ class RecreationDotGov:
 
         div_avail = DivisionAvailability(division)
         for month in months:
-            availabilities_by_date = self._get_availabilities(
+            availabilities_by_date = self._get_division_availabilities(
                 fac_id, div_id, lottery_id, month, year, in_eap
             )
             for date, avail_data in availabilities_by_date.items():
@@ -107,16 +108,36 @@ class RecreationDotGov:
                     )
         return div_avail
 
+    def make_campsite_availabilities(
+        self, start_date: datetime.date, end_date: datetime.date, campground: "Facility"
+    ):
+        fac_id = campground.facility_id
+        months = list(range(start_date.month, end_date.month + 1))
+        year = start_date.year
+        availabilities: list[CampsiteAvailability] = []
+
+        for month in months:
+            for cs_id, cs_data in self._get_campsite_availabilities(
+                fac_id, month, year
+            ).items():
+                cs_avail = CampsiteAvailability(cs_id)
+                for date, status in cs_data["availabilities"].items():
+                    date = dt.strptime(date, "%Y-%m-%dT%H:%M:%SZ").date()
+                    if start_date <= date <= end_date:
+                        cs_avail.add_availability(date, status)
+                availabilities.append(cs_avail)
+        return availabilities
+
     def _get_divisions(self, permitcontent_id: str) -> dict:
-        return self._get(f"permitcontent/{permitcontent_id}/divisions")
+        return self._get(f"permitcontent/{permitcontent_id}/divisions").get(
+            "payload", {}
+        )
 
-    def _get_lotteries(self):
+    def _get_lotteries(self) -> list:
         url = f"{self.base_url}/lottery/available"
-        r = requests.get(url, headers=HEADERS)
-        r.raise_for_status()
-        return r.json().get("lotteries", [])
+        return self._get(url).get("lotteries", [])
 
-    def _get_availabilities(
+    def _get_division_availabilities(
         self,
         facility_id: str,
         division_id: int,
@@ -140,8 +161,15 @@ class RecreationDotGov:
             "ConstantQuotaUsageDaily", {}
         )
 
+    def _get_campsite_availabilities(
+        self, facility_id: str, month: int, year: int
+    ) -> dict[str, dict]:
+        url = f"camps/availability/campground/{facility_id}/month"
+        params = {"start_date": f"{year}-{str(month).zfill(2)}-01T00:00:00.000Z"}
+        return self._get(url, params=params).get("campsites", {})
+
     def _get(self, endpoint: str, params: Optional[dict] = None) -> dict:
         url = f"{self.base_url}/{endpoint}"
         r = requests.get(url, headers=HEADERS, params=params)
         r.raise_for_status()
-        return r.json().get("payload", {})
+        return r.json()
