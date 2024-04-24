@@ -134,8 +134,7 @@ class RecreationDotGov:
         )
 
     def _get_lotteries(self) -> list:
-        url = f"{self.base_url}/lottery/available"
-        return self._get(url).get("lotteries", [])
+        return self._get("lottery/available").get("lotteries", [])
 
     def _get_division_availabilities(
         self,
@@ -154,7 +153,9 @@ class RecreationDotGov:
         if lottery_id and in_eap:
             url = f"{url}/{lottery_id}"
         params = {"month": month, "year": year}
-        quotas = self._get(url, params=params).get("quota_type_maps", {})
+        quotas = (
+            self._get(url, params=params).get("payload", {}).get("quota_type_maps", {})
+        )
         # not entirely clear when it's one map type or the other
         # QuotaUsageByMemberDaily also exists for tracking total people
         return quotas.get("QuotaUsageBySiteDaily", {}) or quotas.get(
