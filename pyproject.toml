@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "recgov"
+name = "recyoself"
 version = "0.1.0"
 description = "Tool for interacting with recreation.gov"
 authors = ["David Tillery <djtillery@gmail.com>"]
@@ -15,7 +15,7 @@ platformdirs = "^4.2.0"
 questionary = "^2.0.1"
 
 [tool.poetry.scripts]
-recgov = "recgov.cli:cli"
+recyoself = "recyoself.cli:cli"
 
 [tool.poetry.group.dev.dependencies]
 mypy = "^1.9.0"

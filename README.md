@@ -1,4 +1,4 @@
-# recgov
+# recyoself
 A tool for viewing and working with data from [RIDB](https://ridb.recreation.gov/download)
 and [recreation.gov](https://www.recreation.gov) (via its undocumented API).
 
@@ -6,21 +6,21 @@ and [recreation.gov](https://www.recreation.gov) (via its undocumented API).
 Install [pipx](https://pipx.pypa.io/stable/) via Homebrew. Then run:
 
 ```bash
-pipx install git+ssh://git@github.com/dtillery/recgov.git
+pipx install git+ssh://git@github.com/dtillery/recyoself.git
 ```
 
 After install, you will likely want to initialize the database and load entity data:
 
 ```bash
-recgov init
+recyoself init
 ```
 
 Data is stored based on [platformdirs](https://github.com/platformdirs/platformdirs). On
-a Mac it will likely be located at `~/Library/Application\ Support/recgov`.
+a Mac it will likely be located at `~/Library/Application\ Support/recyoself`.
 
 ### Upgrade
 ```bash
-pipx reinstall recgov
+pipx reinstall recyoself
 ```
 
 This will not clear the database.
@@ -31,13 +31,13 @@ There's not much configuration right now to speak of.
 ### Environment Variables
 I recommend managing these locally with like [direnv](https://direnv.net).
 
-#### `RECGOV_ENV`
+#### `RECYOSELF_ENV`
 If this is set to `dev`, the entity CSVs and database will be saved in the package's
 `data/` directory. Useful if you're doing development and want to inspect the database
 easily.
 
 ## Usage
-All subcommands are accessible under the `recgov` command. All support `--help` to list
+All subcommands are accessible under the `recyoself` command. All support `--help` to list
 documentation.
 
 ### `init [OPTIONS]`
@@ -61,10 +61,10 @@ Initial Rec.gov entities loaded include:
 
 ```bash
 # initialize with downloads
->> recgov init
+>> recyoself init
 ...
 # initialize with cached data
->> recgov init --skip-download
+>> recyoself init --skip-download
 ```
 
 ### `drop`
@@ -81,7 +81,7 @@ fresh or after a `drop`.***
 
 ```bash
 # load divisions for Glacier National Park Wilderness Permits
->> recgov load-divisions 4675321
+>> recyoself load-divisions 4675321
 ```
 
 ### `list-facilities [OPTIONS] SEARCH_SUBSTRING`
@@ -92,7 +92,7 @@ results based on the permit's name.
 
 ```bash
 # find all permits and campgrounds containing "rainier"
->> recgov list-facilities --type permit --type campground glacier
+>> recyoself list-facilities --type permit --type campground glacier
 Campground: Exit Glacier Campground (248555)
 Rec Area: Kenai Fjords National Park (KEFJ)
 Org: National Park Service (NPS)
@@ -111,7 +111,7 @@ Rec.gov. These may be needed for other operations and should be loaded automatic
 fresh or after a `drop`.***
 
 ```bash
-recgov load-lotteries
+recyoself load-lotteries
 ```
 
 ### `list-lotteries SEARCH_SUBSTRING`
@@ -120,7 +120,7 @@ substring argument to filter results based on the lottery's name or description.
 
 ```bash
 # print lotteries with "cascade" in the name/desc.
->> recgov list-lotteries cascade
+>> recyoself list-lotteries cascade
 North Cascades 2024 Early Access Lottery: North Cascades National Park Backcountry Permits
 UUID: 93d4020b-a326-431e-b3fa-54ea07bd45b7
 Facility: North Cascades National Park Backcountry Permits (4675322)
@@ -145,7 +145,7 @@ there are three other commands:
 
 ```bash
 # create an itinerary in the North Cascades
->> recgov create-itinerary 4675322 northcascades
+>> recyoself create-itinerary 4675322 northcascades
 No divisions found for permit "North Cascades National Park Backcountry Permits". Load? [y/N]: y
 Loading Divisions: 100%|█████████████████████████████████████████████████████████████████████████| 247/247 [00:00<00:00, 5908.95divs/s]
 Begin typing and make a selection to add it to your itinerary.
@@ -165,7 +165,7 @@ Saving itinerary "northcascades" with stops:
 List all of the existing itineraries all with their divisions (in order) and associated permit.
 
 ```bash
->> recgov list-itineraries
+>> recyoself list-itineraries
 gunsightpass (Glacier National Park Wilderness Permits)
 1. GUN - Gunsight Lake (No Campfires)
 2. ELL - Lake Ellen Wilson (No Campfires)
@@ -183,7 +183,7 @@ can affect the options available. Can/must be supplied with the following option
 
 ```bash
 # find available date options for the blueglacier Itinerary in June
->> recgov find-itinerary-dates -s 2024-06-01 -e 2024-06-30 blueglacier
+>> recyoself find-itinerary-dates -s 2024-06-01 -e 2024-06-30 blueglacier
 4 date matches found:
 Sat, Jun 15 - Mon, Jun 17
 6/15/24: Lewis Meadow
@@ -214,7 +214,7 @@ if it is not supplied only the given start-date will be used.
 later date) in the results.
 
 ```bash
->> recgov find-campsite-dates -s 2024-09-01 -e 2024-09-30 --include-nyr 247592 2
+>> recyoself find-campsite-dates -s 2024-09-01 -e 2024-09-30 --include-nyr 247592 2
 Hoh Rainforest Campground: 2-day availabilities from Sep 1 to Sep 30)
 Site 1 (A): Standard, Non-Electric, starting on:
 Wed, Sep 11
@@ -253,7 +253,7 @@ many other types too numerous to mention.
 "Points of interest" within a recreation area. Can range from campgrounds to wilderness
 permits to visitor centers to fish hatcheries. This is one of the most overloaded terms and
 one I try to obfuscate often (e.g. refering to "permits" when creating itineraries). See
-`recgov.models.facility.FacilityType` for all of the types we've encountered.
+`recyoself.models.facility.FacilityType` for all of the types we've encountered.
 
 ### Division
 Appears to refer to indivial components that might make up an itinerary on Rec.gov. While

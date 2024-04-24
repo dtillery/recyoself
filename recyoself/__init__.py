@@ -3,10 +3,10 @@ import os
 from platformdirs import PlatformDirs
 from prompt_toolkit.styles import Style
 
-if os.environ.get("RECGOV_ENV") == "dev":
+if os.environ.get("RECYOSELF_ENV") == "dev":
     USER_DATA_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../data"))
 else:
-    LOCAL_DIRS = PlatformDirs(appname="recgov", appauthor=False, ensure_exists=True)
+    LOCAL_DIRS = PlatformDirs(appname="recyoself", appauthor=False, ensure_exists=True)
     USER_DATA_DIR = LOCAL_DIRS.user_data_dir
 
 USER_AGENT: str = (

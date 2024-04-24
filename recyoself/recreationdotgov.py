@@ -6,7 +6,7 @@ import requests
 from sqlmodel import select
 from tqdm import tqdm
 
-from recgov import HEADERS
+from recyoself import HEADERS
 
 from .campsite_availability import CampsiteAvailability
 from .division_availability import DivisionAvailability

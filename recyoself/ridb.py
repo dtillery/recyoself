@@ -8,7 +8,7 @@ import requests
 from sqlmodel import select
 from tqdm import tqdm
 
-from recgov import USER_DATA_DIR
+from recyoself import USER_DATA_DIR
 
 from .models import Campsite, Facility, Organization, RecreationArea
 
