@@ -450,7 +450,8 @@ def find_campsite_dates(
     nyr: bool,
     campground_id: str,
     num_days: int,
-):
+) -> None:
+    """Find available reservation dates a campground."""
     start_date = start.date()
     end_date = end and end.date() or start.date()
     end_of_trip_date = end_date + timedelta(days=num_days)
