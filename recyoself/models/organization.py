@@ -12,6 +12,6 @@ if TYPE_CHECKING:
 class Organization(Base, table=True):
     name: str
     abbr: str
-    org_id: int = Field(unique=True)
+    org_id: int = Field(unique=True, index=True)
     rec_areas: list["RecreationArea"] = Relationship(back_populates="org")
     facilities: list["Facility"] = Relationship(back_populates="org")

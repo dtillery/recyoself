@@ -39,8 +39,8 @@ class FacilityType(str, BaseEnum):
 
 
 class Facility(Base, table=True):
-    name: str
-    facility_id: str = Field(unique=True)
+    name: str = Field(index=True)
+    facility_id: str = Field(unique=True, index=True)
     type: FacilityType = Field(
         sa_column=sa.Column(sa.Enum(FacilityType, create_constraint=True))
     )
