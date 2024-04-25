@@ -12,7 +12,7 @@ if TYPE_CHECKING:
 class RecreationArea(Base, table=True):
     name: str
     org_rec_area_id: str | None = None
-    rec_area_id: int = Field(unique=True)
+    rec_area_id: str = Field(unique=True, index=True)
     org_id: int | None = Field(default=None, foreign_key="organization.id")
     org: "Organization" = Relationship(back_populates="rec_areas")
     facilities: list["Facility"] = Relationship(back_populates="rec_area")

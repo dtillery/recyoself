@@ -23,8 +23,8 @@ class LotteryType(str, BaseEnum):
 
 
 class Lottery(Base, table=True):
-    lottery_id: UUID
-    name: str
+    lottery_id: UUID = Field(index=True)
+    name: str = Field(index=True)
     desc: str | None
     summary: str | None
     status: LotteryStatus
