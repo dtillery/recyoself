@@ -440,7 +440,7 @@ def find_itinerary_dates(ctx, start_date, end_date, reversable, itinerary_name) 
     is_flag=True,
     help="Include sites and dates that are Not Yet Reservable",
 )
-@click.argument("campground_id", type=str)
+@click.argument("campground_id", type=int)
 @click.argument("num_days", type=int)
 @click.pass_context
 def find_campsite_dates(
@@ -448,7 +448,7 @@ def find_campsite_dates(
     start: datetime.datetime,
     end: Optional[datetime.datetime],
     nyr: bool,
-    campground_id: str,
+    campground_id: int,
     num_days: int,
 ) -> None:
     """Find available reservation dates a campground."""

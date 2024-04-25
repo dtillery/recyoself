@@ -1,3 +1,4 @@
+import os
 from typing import Optional
 
 from platformdirs import PlatformDirs
@@ -6,7 +7,11 @@ from sqlmodel import SQLModel, create_engine
 
 from recyoself import USER_DATA_DIR, models
 
-DATABASE_URL = f"sqlite:///{USER_DATA_DIR}/database.db"
+if os.environ.get("RECYOSELF_DB_URL"):
+    DATABASE_URL = os.environ["RECYOSELF_DB_URL"]
+else:
+    DATABASE_URL = f"sqlite:///{USER_DATA_DIR}/database.db"
+
 echo = False
 engine = engine = create_engine(DATABASE_URL, echo=echo)
 Session = sessionmaker(engine)

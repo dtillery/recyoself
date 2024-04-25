@@ -2,16 +2,17 @@ import datetime
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
+from pydantic import BaseModel, PrivateAttr
+
 if TYPE_CHECKING:
     pass
 
 
-@dataclass
-class CampsiteAvailability:
+class CampsiteAvailability(BaseModel):
 
-    campsite_id: str
-    _availabilities: list["CampsiteAvailabilityInfo"] = field(
-        default_factory=list, repr=False
+    campsite_id: int
+    _availabilities: list["CampsiteAvailabilityInfo"] = PrivateAttr(
+        default_factory=list
     )
 
     @property

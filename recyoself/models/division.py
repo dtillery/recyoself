@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING, Optional
 
-import sqlalchemy as sa
+from sqlalchemy import BigInteger, Column
 from sqlmodel import Field, Relationship
 
 from .base import Base
@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 class Division(Base, table=True):
     name: str
     type: str
-    division_id: int = Field(unique=True)
+    division_id: int = Field(sa_column=Column(BigInteger(), unique=True))
     district: str | None
     is_hidden: bool
     is_active: bool

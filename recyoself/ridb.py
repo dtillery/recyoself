@@ -42,7 +42,7 @@ class RIDB:
         Departments of X refer to it as their ParentOrg, I am going to assume it's
         equivalent to the US Government for our purposes."""
 
-        return Organization(name="US Government", abbr="USA", org_id="157")
+        return Organization(name="US Government", abbr="USA", org_id=157)
 
     def make_rec_areas(self, session: "Session") -> Iterator[RecreationArea]:
         for data in self._read_csv("RecAreas"):
@@ -53,7 +53,7 @@ class RIDB:
             }
 
             org_stmt = select(Organization).where(
-                Organization.org_id == data["ParentOrgID"]
+                Organization.org_id == int(data["ParentOrgID"])
             )
             org = session.scalars(org_stmt).first()
 
@@ -71,7 +71,7 @@ class RIDB:
             }
             # In JSON, "OrgFacilityID" and "ParentOrgID" are switched lol
             org_stmt = select(Organization).where(
-                Organization.org_id == data["OrgFacilityID"]
+                Organization.org_id == int(data["OrgFacilityID"])
             )
             org = session.scalars(org_stmt).first()
 

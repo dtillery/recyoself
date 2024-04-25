@@ -14,9 +14,6 @@ sqlmodel = "^0.0.16"
 platformdirs = "^4.2.0"
 questionary = "^2.0.1"
 
-[tool.poetry.scripts]
-recyoself = "recyoself.cli:cli"
-
 [tool.poetry.group.dev.dependencies]
 mypy = "^1.9.0"
 types-requests = "^2.31.0.20240406"
@@ -24,6 +21,12 @@ black = "^24.3.0"
 isort = "^5.13.2"
 pre-commit = "^3.7.0"
 types-tqdm = "^4.66.0.20240106"
+
+[tool.poetry.group.aws.dependencies]
+psycopg = {extras = ["binary"], version = "^3.1.18"}
+
+[tool.poetry.scripts]
+recyoself = "recyoself.cli:cli"
 
 [build-system]
 requires = ["poetry-core"]

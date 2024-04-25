@@ -1,11 +1,16 @@
 import os
 
-from platformdirs import PlatformDirs
 from prompt_toolkit.styles import Style
 
-if os.environ.get("RECYOSELF_ENV") == "dev":
+RECYOSELF_ENV = os.environ.get("RECYOSELF_ENV")
+
+if RECYOSELF_ENV == "dev":
     USER_DATA_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../data"))
+elif RECYOSELF_ENV == "aws":
+    USER_DATA_DIR == "/tmp"
 else:
+    from platformdirs import PlatformDirs
+
     LOCAL_DIRS = PlatformDirs(appname="recyoself", appauthor=False, ensure_exists=True)
     USER_DATA_DIR = LOCAL_DIRS.user_data_dir
 

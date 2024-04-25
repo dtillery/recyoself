@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING, Optional
 
-import sqlalchemy as sa
+from sqlalchemy import BigInteger, Column, Enum
 from sqlmodel import Field, Relationship
 
 from .base import Base, BaseEnum
@@ -44,13 +44,13 @@ class UseType(str, BaseEnum):
 class Campsite(Base, table=True):
     name: str
     loop: str | None = Field(default=None)
-    campsite_id: int
+    campsite_id: int = Field(sa_column=Column(BigInteger()))
     type: CampsiteType = Field(
-        sa_column=sa.Column(sa.Enum(CampsiteType, create_constraint=True))
+        sa_column=Column(Enum(CampsiteType, create_constraint=True))
     )
     electric: bool
     group_site: bool
-    use: UseType = Field(sa_column=sa.Column(sa.Enum(UseType, create_constraint=True)))
+    use: UseType = Field(sa_column=Column(Enum(UseType, create_constraint=True)))
     facility_id: int = Field(foreign_key="facility.id")
     facility: "Facility" = Relationship(back_populates="campsites")
 

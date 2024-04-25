@@ -120,7 +120,7 @@ class RecreationDotGov:
             for cs_id, cs_data in self._get_campsite_availabilities(
                 fac_id, month, year
             ).items():
-                cs_avail = CampsiteAvailability(cs_id)
+                cs_avail = CampsiteAvailability(campsite_id=cs_id)
                 for date, status in cs_data["availabilities"].items():
                     date = dt.strptime(date, "%Y-%m-%dT%H:%M:%SZ").date()
                     if start_date <= date <= end_date:
