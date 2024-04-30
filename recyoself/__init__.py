@@ -7,7 +7,7 @@ RECYOSELF_ENV = os.environ.get("RECYOSELF_ENV")
 if RECYOSELF_ENV == "dev":
     USER_DATA_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../data"))
 elif RECYOSELF_ENV == "aws":
-    USER_DATA_DIR == "/tmp"
+    USER_DATA_DIR = "/tmp"
 else:
     from platformdirs import PlatformDirs
 

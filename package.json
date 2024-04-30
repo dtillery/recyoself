@@ -1,0 +1,11 @@
+{
+  "name": "recyoself",
+  "version": "0.2.0",
+  "description": "",
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "serverless-deployment-bucket": "^1.6.0",
+    "serverless-python-requirements": "^6.1.0"
+  }
+}

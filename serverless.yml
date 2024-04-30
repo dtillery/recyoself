@@ -1,0 +1,47 @@
+service: recyoself
+
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  region: us-west-2
+  runtime: python3.12
+  memorySize: 512
+  deploymentBucket:
+    name: ${aws:accountId}-serverless-deploy
+    serverSideEncryption: AES256
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action: "ssm:GetParameter"
+          Resource: "*"
+
+functions:
+  lambda-test:
+    handler: lambda.run
+    timeout: 15
+    ephemeralStorageSize: 512
+    environment:
+    events:
+      # Invoke Lambda function every minute
+      # - schedule: rate(1 hour)
+    layers:
+      - Ref: PythonRequirementsLambdaLayer
+      - arn:aws:lambda:us-west-2:345057560386:layer:AWS-Parameters-and-Secrets-Lambda-Extension:11
+plugins:
+  - serverless-python-requirements
+  - serverless-deployment-bucket
+
+custom:
+  pythonRequirements:
+    layer: true
+  deploymentBucket:
+    blockPublicAccess: true
+
+package:
+  patterns:
+    - '!node_modules/**'
+    - '!data/**'
+    - '!misc/**'
+    - '!.mypy_cache/**'

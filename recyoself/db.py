@@ -2,6 +2,7 @@ import os
 from typing import Optional
 
 from platformdirs import PlatformDirs
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import sessionmaker
 from sqlmodel import SQLModel, create_engine
 
@@ -13,7 +14,11 @@ else:
     DATABASE_URL = f"sqlite:///{USER_DATA_DIR}/database.db"
 
 echo = False
-engine = engine = create_engine(DATABASE_URL, echo=echo)
+engine = create_engine(DATABASE_URL, echo=echo)
+try:
+    engine.connect()
+except SQLAlchemyError as e:
+    raise ConnectionError(f"Error on engine creation: {e.__cause__}")
 Session = sessionmaker(engine)
 
 
