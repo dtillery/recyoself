@@ -178,8 +178,13 @@ for a given timeframe. At the start you may be asked to choose a related Lottery
 can affect the options available. Can/must be supplied with the following options:
 
 * `-s YYYY-MM-DD` (required): the starting date to being searching from.
-* `-e YYYY-MM-DD` (required): the ending date to search to.
+* `-e YYYY-MM-DD` (optional): the ending date to search to. If none is specified, the start
+date will be used (i.e. single day trip start).
 * `-r` (optional): Flag to search for available dates for the itinerary in the reversed order.
+* `-l` (optional): A Lottery UUID to be used in place of asking for user input if multiple
+lotteries are found for a facility (to facilitate daemon-mode)
+* `--daemon-mode` (optional): Only print output if availabilities are found (to facilitate
+running as a daemonized-script and running actions based on results).
 
 ```bash
 # find available date options for the blueglacier Itinerary in June
@@ -212,6 +217,8 @@ NUM_DAYS. Options include:
 if it is not supplied only the given start-date will be used.
 * `--include-nyr`: Include campsites that are Not Yet Reservable (but may become so at a
 later date) in the results.
+* `--daemon-mode` (optional): Only print output if availabilities are found (to facilitate
+running as a daemonized-script and running actions based on results).
 
 ```bash
 >> recyoself find-campsite-dates -s 2024-09-01 -e 2024-09-30 --include-nyr 247592 2
