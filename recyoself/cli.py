@@ -18,11 +18,18 @@ from .ridb import RIDB
 if TYPE_CHECKING:
     from .division_availability import DivisionAvailability
 
+DAEMON_MODE: bool = False
+
 
 @click.group(chain=True)
 @click.pass_context
 def cli(ctx) -> None:
     ctx.obj = {}
+
+
+def echo(message: str = "", override: bool = False, **kwargs):
+    if not DAEMON_MODE or override:
+        click.secho(message, **kwargs)
 
 
 @cli.command()
@@ -38,12 +45,10 @@ def init(ctx, skip_download) -> None:
     init_db()
     ridb = RIDB()
     if not skip_download:
-        click.secho(
-            f"Fetching RIDB entities full-export CSVs...", bold=True, underline=True
-        )
+        echo(f"Fetching RIDB entities full-export CSVs...", bold=True, underline=True)
         ridb.fetch_entities()
     with Session.begin() as session:
-        click.secho(f"Loading entities into database...", bold=True, underline=True)
+        echo(f"Loading entities into database...", bold=True, underline=True)
         for organization in ridb.make_organizations():
             session.add(organization)
         session.add(ridb.make_org_157())
@@ -109,13 +114,13 @@ def list_lotteries(search_substring: str) -> None:
             close_at = f"{l.close_at.date():%-m/%-d/%y}"
             access_start = f"{l.access_start_at.date():%-m/%-d/%y}"
             access_end = f"{l.access_end_at.date():%-m/%-d/%y}"
-            click.secho(f"{l.name}: {l.desc}", bold=True, underline=True)
-            click.echo(f"UUID: {l.lottery_id}")
-            click.echo(f"Facility: {l.facility.name} ({l.facility.facility_id})")
-            click.echo(f"Status: {l.status.name.title()}")
-            click.echo(f"Open From: {open_at} => {close_at}")
-            click.echo(f"Winners Access From: {access_start} => {access_end}")
-            click.echo()
+            echo(f"{l.name}: {l.desc}", bold=True, underline=True)
+            echo(f"UUID: {l.lottery_id}")
+            echo(f"Facility: {l.facility.name} ({l.facility.facility_id})")
+            echo(f"Status: {l.status.name.title()}")
+            echo(f"Open From: {open_at} => {close_at}")
+            echo(f"Winners Access From: {access_start} => {access_end}")
+            echo()
 
 
 @cli.command()
@@ -135,7 +140,7 @@ def list_campsites(ctx, facility_id: str) -> None:
             .order_by(Campsite.loop)
         )
         cs_results = session.scalars(cs_stmt)
-        click.secho(
+        echo(
             f"Campsites at {facility.name} ({facility.facility_id}):",
             bold=True,
             underline=True,
@@ -143,7 +148,7 @@ def list_campsites(ctx, facility_id: str) -> None:
         for c in cs_results.all():
             group = c.group_site and "Group " or ""
             electric = c.electric and "Electric" or "Non-Electric"
-            click.echo(
+            echo(
                 f"{c.campsite_id}: {c.name} ({c.loop}), {c.combined_type}, {c.use.pretty_name}"
             )
 
@@ -154,9 +159,9 @@ def list_itineraries() -> None:
     with Session.begin() as session:
         itineraries = session.scalars(select(Itinerary)).all()
         for i in itineraries:
-            click.secho(f"{i.name} ({i.permit.name})", bold=True, underline=True)
-            click.echo(f"{i.ordered_divisions_str}")
-            click.echo()
+            echo(f"{i.name} ({i.permit.name})", bold=True, underline=True)
+            echo(f"{i.ordered_divisions_str}")
+            echo()
 
 
 @cli.command()
@@ -184,17 +189,15 @@ def list_facilities(ftypes: tuple[str], search_substring: str) -> None:
             stmt = stmt.where(col(Facility.name).icontains(search_substring))
         permits = session.scalars(stmt).all()
         for p in permits:
-            click.secho(
+            echo(
                 f"{p.type.pretty_name}: {p.name} ({p.facility_id})",
                 bold=True,
                 underline=True,
             )
             if p.rec_area:
-                click.echo(
-                    f"Rec Area: {p.rec_area.name} ({p.rec_area.org_rec_area_id})"
-                )
-            click.echo(f"Org: {p.org.name} ({p.org.abbr})")
-            click.echo()
+                echo(f"Rec Area: {p.rec_area.name} ({p.rec_area.org_rec_area_id})")
+            echo(f"Org: {p.org.name} ({p.org.abbr})")
+            echo()
 
 
 @cli.command()
@@ -208,7 +211,7 @@ def create_itinerary(ctx, permit_id, new_itinerary_name) -> None:
             select(Facility).where(Facility.facility_id == permit_id)
         ).first()
         if not permit:
-            click.echo(click.style(f"No Permit found with ID {permit_id}.", fg="red"))
+            echo(click.style(f"No Permit found with ID {permit_id}.", fg="red"))
             return
 
         if not permit.divisions:
@@ -218,7 +221,7 @@ def create_itinerary(ctx, permit_id, new_itinerary_name) -> None:
 
         reservable_divisions = [d for d in permit.divisions if d.is_reservable]
         if not reservable_divisions:
-            click.echo("No currently reservable sites found. :(")
+            echo("No currently reservable sites found. :(")
             return
 
         meta_info = {
@@ -230,12 +233,12 @@ def create_itinerary(ctx, permit_id, new_itinerary_name) -> None:
             meta_info[d.name] = f"{d.type}, {d.district}"
 
         itinerary, curr_itinerary_str, user_input = None, None, None
-        click.secho(
+        echo(
             "Begin typing and make a selection to add it to your itinerary.", bold=True
         )
-        click.secho('=> "save" to save itinerary as currently constructed')
-        click.secho('=> "cancel" to exit without saving the current itinerary')
-        click.secho('=> "list" to list all division autocomplete options')
+        echo('=> "save" to save itinerary as currently constructed')
+        echo('=> "cancel" to exit without saving the current itinerary')
+        echo('=> "list" to list all division autocomplete options')
         while True:
             # qu modifies meta_info inplace, so we need a copy. shallow is fine.
             user_input = qu.autocomplete(
@@ -252,10 +255,10 @@ def create_itinerary(ctx, permit_id, new_itinerary_name) -> None:
             elif user_input in ("cancel", None):
                 ctx.abort()
             elif user_input == "":
-                click.echo("Please provide an input.")
+                echo("Please provide an input.")
                 continue
             elif user_input == "list":
-                click.echo_via_pager(
+                echo_via_pager(
                     f"{d.name} ({d.type}, {d.district})\n" for d in reservable_divisions
                 )
 
@@ -267,32 +270,28 @@ def create_itinerary(ctx, permit_id, new_itinerary_name) -> None:
             ]
 
             if not matching_divisions:
-                click.echo(
-                    f'Could find division match for "{user_input}, please try again.'
-                )
+                echo(f'Could find division match for "{user_input}, please try again.')
             elif len(matching_divisions) > 1 and not exact_match:
                 matches_str = "\n".join([f">>> {d.name}" for d in matching_divisions])
-                click.echo(
+                echo(
                     f"Found multiple matches for {user_input}:\n{matches_str}\nPlease be more specific."
                 )
             else:
                 division = exact_match and exact_match[0] or matching_divisions[0]
-                click.echo(f"Adding {division.name} to the itinerary.")
+                echo(f"Adding {division.name} to the itinerary.")
                 if not itinerary:
                     itinerary = Itinerary(name=new_itinerary_name, permit=permit)
                 itinerary.add_division(division)
                 session.add(itinerary)
                 session.flush()
-                click.echo(
-                    f"Current itinerary includes:\n{itinerary.ordered_divisions_str}"
-                )
+                echo(f"Current itinerary includes:\n{itinerary.ordered_divisions_str}")
 
         if itinerary is None:
-            click.echo("No divisions selected, not saving itinerary.")
+            echo("No divisions selected, not saving itinerary.")
         elif not itinerary.divisions:
-            click.echo("No divisions added, not creating itinerary.")
+            echo("No divisions added, not creating itinerary.")
         else:
-            click.echo(
+            echo(
                 f'Saving itinerary "{itinerary.name}" with stops:\n{itinerary.ordered_divisions_str}'
             )
             session.add(itinerary)
@@ -320,9 +319,10 @@ def print_availability_matches(
     for match in avail_matches:
         first_day = f"{match[0][1]:%a, %b %-d}"
         last_day = f"{match[-1][1]:%a, %b %-d}"
-        click.secho(f"{first_day} - {last_day}", bold=True)
-        click.echo(
-            "\n".join([f"{i[1]:%-m/%-d/%y}: {i[0].division.name}" for i in match])
+        echo(f"{first_day} - {last_day}", override=True, bold=True)
+        echo(
+            "\n".join([f"{i[1]:%-m/%-d/%y}: {i[0].division.name}" for i in match]),
+            override=True,
         )
 
 
@@ -348,19 +348,34 @@ def print_availability_matches(
     is_flag=True,
     help="Find availabilty for reversed-itinerary.",
 )
+@click.option(
+    "--daemon-mode",
+    type=bool,
+    is_flag=True,
+    help="Output only if availabilities are found (for daemonizing purposes)",
+)
 @click.argument("itinerary_name")
 @click.pass_context
-def find_itinerary_dates(ctx, start_date, end_date, reversable, itinerary_name) -> None:
+def find_itinerary_dates(
+    ctx,
+    start_date: datetime.datetime,
+    end_date: datetime.datetime,
+    reversable: bool,
+    daemon_mode: bool,
+    itinerary_name: str,
+) -> None:
     """Find available booking dates for a named itinerary."""
-    start_date = start_date.date()
-    end_date = end_date.date()
+    global DAEMON_MODE
+    DAEMON_MODE = daemon_mode
+    start = start_date.date()
+    end = end_date.date()
     itinerary = None
     with Session.begin() as session:
         itinerary = session.scalars(
             select(Itinerary).where(Itinerary.name == itinerary_name)
         ).first()
         if not itinerary:
-            click.echo(f'No itinerary found with name "{itinerary_name}"')
+            echo(f'No itinerary found with name "{itinerary_name}"')
             return
 
         lotteries = itinerary.permit.lotteries
@@ -383,9 +398,7 @@ def find_itinerary_dates(ctx, start_date, end_date, reversable, itinerary_name) 
         division_availabilities: list[DivisionAvailability] = []
         for division in itinerary.divisions:
             division_availabilities.append(
-                rdg.make_division_availabilities(
-                    start_date, end_date, division, relevant_lottery
-                )
+                rdg.make_division_availabilities(start, end, division, relevant_lottery)
             )
 
         avail_matches = find_division_availability_date_matches(division_availabilities)
@@ -396,20 +409,22 @@ def find_itinerary_dates(ctx, start_date, end_date, reversable, itinerary_name) 
             )
 
         if not (avail_matches or avail_matches_reversed):
-            click.secho(
+            echo(
                 "No possible date matches found for itinerary. :(", fg="red", bold=True
             )
         else:
-            click.secho(
+            echo(
                 f"{len(avail_matches)} date matches found:",
+                override=True,
                 bold=True,
                 underline=True,
                 fg="green",
             )
             print_availability_matches(avail_matches)
             if reversable:
-                click.secho(
+                echo(
                     f"{len(avail_matches_reversed)} reversed-itinerary date matches found:",
+                    override=True,
                     bold=True,
                     underline=True,
                     fg="green",
@@ -440,6 +455,12 @@ def find_itinerary_dates(ctx, start_date, end_date, reversable, itinerary_name) 
     is_flag=True,
     help="Include sites and dates that are Not Yet Reservable",
 )
+@click.option(
+    "--daemon-mode",
+    type=bool,
+    is_flag=True,
+    help="Output only if availabilities are found (for daemonizing purposes)",
+)
 @click.argument("campground_id", type=str)
 @click.argument("num_days", type=int)
 @click.pass_context
@@ -448,10 +469,13 @@ def find_campsite_dates(
     start: datetime.datetime,
     end: Optional[datetime.datetime],
     nyr: bool,
+    daemon_mode: bool,
     campground_id: str,
     num_days: int,
 ) -> None:
     """Find available reservation dates a campground."""
+    global DAEMON_MODE
+    DAEMON_MODE = daemon_mode
     start_date = start.date()
     end_date = end and end.date() or start.date()
     end_of_trip_date = end_date + timedelta(days=num_days)
@@ -465,11 +489,7 @@ def find_campsite_dates(
             )
 
         rdg = RecreationDotGov()
-        click.secho(
-            f"{campground.name}: {num_days}-day availabilities from {start_date:%b %-d} to {end_date:%b %-d})",
-            bold=True,
-            underline=True,
-        )
+        reservable_block_list: list[tuple[Campsite, tuple]] = []
         for ca in rdg.make_campsite_availabilities(
             start_date, end_of_trip_date, campground
         ):
@@ -479,17 +499,30 @@ def find_campsite_dates(
                     select(Campsite).where(Campsite.campsite_id == ca.campsite_id)
                 ).first()
                 if cs:
-                    click.secho(
-                        f"Site {cs.name} ({cs.loop}): {cs.combined_type}, starting on:",
-                        bold=True,
-                    )
-                    for date, curr_avail in reservable_blocks:
-                        s = f"{date:%a, %b %-d}"
-                        color = "green"
-                        if not curr_avail:
-                            s += " (NYR)"
-                            color = "yellow"
-                        click.secho(s, fg=color)
+                    reservable_block_list.append((cs, reservable_blocks))
+
+        if not reservable_block_list:
+            echo("No open campsites found. :(", fg="red", bold=True)
+        else:
+            echo(
+                f"{campground.name}: {num_days}-day availabilities from {start_date:%b %-d} to {end_date:%b %-d})",
+                override=True,
+                bold=True,
+                underline=True,
+            )
+            for cs, blocks in reservable_block_list:
+                echo(
+                    f"Site {cs.name} ({cs.loop}): {cs.combined_type}, starting on:",
+                    override=True,
+                    bold=True,
+                )
+                for date, curr_avail in blocks:
+                    s = f"{date:%a, %b %-d}"
+                    color = "green"
+                    if not curr_avail:
+                        s += " (NYR)"
+                        color = "yellow"
+                    echo(s, override=True, fg=color)
 
 
 if __name__ == "__main__":
