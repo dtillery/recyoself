@@ -338,7 +338,7 @@ def print_availability_matches(
     "--end-date",
     "-e",
     type=click.DateTime(formats=["%Y-%m-%d"]),
-    required=True,
+    default=None,
     metavar="<YYYY-MM-DD>",
 )
 @click.option(
@@ -359,7 +359,7 @@ def print_availability_matches(
 def find_itinerary_dates(
     ctx,
     start_date: datetime.datetime,
-    end_date: datetime.datetime,
+    end_date: Optional[datetime.datetime],
     reversable: bool,
     daemon_mode: bool,
     itinerary_name: str,
@@ -368,7 +368,7 @@ def find_itinerary_dates(
     global DAEMON_MODE
     DAEMON_MODE = daemon_mode
     start = start_date.date()
-    end = end_date.date()
+    end = end_date and end_date.date() or start
     itinerary = None
     with Session.begin() as session:
         itinerary = session.scalars(
