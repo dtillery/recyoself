@@ -349,6 +349,13 @@ def print_availability_matches(
     help="Find availabilty for reversed-itinerary.",
 )
 @click.option(
+    "--lottery-id",
+    "-l",
+    type=str,
+    help="rec.gov Lottery ID to use (and skips prompt)",
+    default=None,
+)
+@click.option(
     "--daemon-mode",
     type=bool,
     is_flag=True,
@@ -361,6 +368,7 @@ def find_itinerary_dates(
     start_date: datetime.datetime,
     end_date: Optional[datetime.datetime],
     reversable: bool,
+    lottery_id: Optional[str],
     daemon_mode: bool,
     itinerary_name: str,
 ) -> None:
@@ -385,14 +393,22 @@ def find_itinerary_dates(
         elif len(lotteries) == 1:
             relevant_lottery = lotteries[0]
         else:
-            choices: list[qu.Choice] = []
-            question = f'Select a lottery for "{itinerary.permit.name}":'
-            for l in lotteries:
-                title = f"{l.name}"
-                choices.append(qu.Choice(title, value=l))
-            relevant_lottery = qu.select(question, choices=choices).ask()
-            if relevant_lottery is None:
-                ctx.abort()
+            if lottery_id:
+                for l in lotteries:
+                    if str(l.lottery_id).lower() == lottery_id.lower():
+                        relevant_lottery = l
+                        break
+                if relevant_lottery is None:
+                    raise ValueError(f"Could not find lottery with id: {lottery_id}")
+            else:
+                choices: list[qu.Choice] = []
+                question = f'Select a lottery for "{itinerary.permit.name}":'
+                for l in lotteries:
+                    title = f"{l.name}"
+                    choices.append(qu.Choice(title, value=l))
+                relevant_lottery = qu.select(question, choices=choices).ask()
+                if relevant_lottery is None:
+                    ctx.abort()
 
         rdg = RecreationDotGov()
         division_availabilities: list[DivisionAvailability] = []
