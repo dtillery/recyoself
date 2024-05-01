@@ -521,7 +521,7 @@ def find_campsite_dates(
             echo("No open campsites found. :(", fg="red", bold=True)
         else:
             echo(
-                f"{campground.name}: {num_days}-day availabilities from {start_date:%b %-d} to {end_date:%b %-d})",
+                f"{campground.name}: {num_days}-day availabilities from {start_date:%b %-d} to {end_date:%b %-d}",
                 override=True,
                 bold=True,
                 underline=True,
