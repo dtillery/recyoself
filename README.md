@@ -237,6 +237,60 @@ Mon, Sep 2 (NYR)
 ...
 ```
 
+## Daemon Mode
+Some command support a `--daemon-mode`. This configures the command to only print output
+if there are availabilties are found. This is to facilitate running the commands as a part
+of daemonized-scripts that are configured to alert based on results. Examples and
+templates for setting this up can be found in the `daemon` directory.
+
+Daemonization can be built around running the `run-and-alert.sh` script, which will run
+a command (that should use the `--daemon-mode` option) and email a configured address if
+results are found. This script relies on the [Himalaya 1.0.0](https://pimalaya.org/himalaya/cli/latest/)
+library to perform email (see their setup instructions for getting started).
+
+The commands that currently support this are:
+
+* `find-itinerary-dates`
+* `find-campsite-dates`
+
+### Environment Variables
+These environment variables are used in the `run-and-alert.sh` script.
+
+* `PATH`: Path configuration for the script to run under (useful if you don't want to specify full paths to your commands)
+* `RECYOSELF_DAEMON_CMD`: the recyoself command (in case it is aliased or a full path is necessary)
+* `RECYOSELF_DAEMON_CMD_ARGS`: complete arguments passed to recyoself (e.g. `find-itinerary-dates ...`)
+* `RECYOSELF_DAEMON_NOTIFY_NAME`: Appears in email subject after "Recyoself Alert:"
+* `RECYOSELF_DAEMON_EMAIL`: the email address used as the `to` and `from` for Himalaya
+
+### launchd
+[launchd](https://www.launchd.info) is a cron-like service that comes with MacOS. While the computer not asleep it will
+work as its schedule is configured. It can also function while the computer is asleep as
+long as "Power Nap" is active, but running may be inconsistent (as it is at the whims of
+however Power Nap works)
+
+#### Installation
+Configure `launchd/com.recyoself.daemon.cmd.plist.template` as required. Then copy it to
+the LaunchAgents folder:
+
+```bash
+cp com.recyoself.daemon.your-cmd.plist ~/Library/LaunchAgents
+```
+
+#### Usage
+Activate the daemon for running:
+
+```bash
+launchctl bootstrap gui/`id -u` ~/Library/LaunchAgents/com.recyoself.daemon.your-cmd.plist
+```
+
+Deactivate the daemon:
+
+Activate the daemon for running:
+```bash
+launchctl bootout gui/`id -u` ~/Library/LaunchAgents/com.recyoself.daemon.your-cmd.plist
+```
+
+
 ## Terminology
 Terms used here are often based on their counterparts from RIDB and Rec.gov. While some
 attempts and using more "friendly" language have been made, often the underlying models

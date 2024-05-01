@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+  <dict>
+
+    <key>Label</key>
+    <string>com.recyoselfx.daemon.plist</string>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>Nice</key>
+    <integer>-10</integer>
+
+    <key>StartInterval</key>
+    <integer>900</integer>
+
+    <key>WorkingDirectory</key>
+    <string>/path/to/dir</string>
+
+    <key>StandardErrorPath</key>
+    <string>path/to/logs/recyoself_stderr.log</string>
+
+    <key>StandardOutPath</key>
+    <string>path/to/logs/recyoself_stdout.log</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/bin:/usr/bin:/usr/local/bin:~/.local/bin</string>
+        <key>RECYOSELF_DAEMON_CMD</key>
+        <string>your-command-path</string>
+        <key>RECYOSELF_DAEMON_CMD_ARGS</key>
+        <string>your-command-arguments</string>
+        <key>RECYOSELF_DAEMON_NOTIFY_NAME</key>
+        <string>Email Subject Addendum</string>
+        <key>RECYOSELF_DAEMON_EMAIL</key>
+        <string>example@example.com</string>
+    </dict>
+
+    <key>ProgramArguments</key>
+    <array>
+      <string>/bin/bash</string>
+      <string>path/to/run-and-alert.sh</string>
+    </array>
+  </dict>
+</plist>
