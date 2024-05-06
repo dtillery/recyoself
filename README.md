@@ -237,6 +237,10 @@ Mon, Sep 2 (NYR)
 ...
 ```
 
+### `make_launchd_configs [OPTIONS] OUTPUT_DIR`
+Make config for a launchd service based on provided options. I'll add more here when I get
+around to confirming this actually works appropriately.
+
 ## Daemon Mode
 Some command support a `--daemon-mode`. This configures the command to only print output
 if there are availabilties are found. This is to facilitate running the commands as a part
@@ -290,6 +294,12 @@ Activate the daemon for running:
 launchctl bootout gui/`id -u` ~/Library/LaunchAgents/com.recyoself.daemon.your-cmd.plist
 ```
 
+## TODO
+
+- [ ] See if `caffeinate` or `pmset` would help with making running during power-nap more
+consistent
+- [ ] Refactor cli commands into multiple files
+- [ ] Make sure `make-launchd-configs` works correctly
 
 ## Terminology
 Terms used here are often based on their counterparts from RIDB and Rec.gov. While some

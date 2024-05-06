@@ -2,7 +2,11 @@
 # https://stackoverflow.com/questions/34643620/how-can-i-split-my-click-commands-each-with-a-set-of-sub-commands-into-multipl
 
 import datetime
+import os
+import pkgutil
 from datetime import timedelta
+from pathlib import Path
+from string import Template
 from typing import TYPE_CHECKING, Optional
 
 import click
@@ -539,6 +543,68 @@ def find_campsite_dates(
                         s += " (NYR)"
                         color = "yellow"
                     echo(s, override=True, fg=color)
+
+
+@cli.command()
+@click.option("--name", type=str, required=True)
+@click.option("--interval", type=int, required=True, default=900, show_default=True)
+@click.option("--workdir", type=click.Path(exists=True), default=lambda: Path.home())
+@click.option("--logdir", type=click.Path(), required=True)
+@click.option(
+    "--env-path",
+    type=str,
+    default="/bin:/usr/bin:/usr/local/bin:~/.local/bin",
+    show_default=True,
+)
+@click.option("--env-cmd", type=str, default="recyoself", show_default=True)
+@click.option("--env-cmd-args", type=str, default="")
+@click.option("--env-notify-name", type=str, required=True)
+@click.option("--env-email", type=str, required=True)
+@click.option("--script-path", type=click.Path(), default=None)
+@click.argument("output_dir", type=click.Path())
+def make_launchd_configs(
+    name: str,
+    interval: int,
+    workdir: str,
+    logdir: str,
+    env_path: str,
+    env_cmd: str,
+    env_cmd_args: str,
+    env_notify_name: str,
+    env_email: str,
+    script_path: Optional[str],
+    output_dir: str,
+) -> None:
+    if not script_path:
+        script_path = os.path.join(output_dir, "run-and-alert.sh")
+    daemon_name = f"com.recyoself.daemon.{name}.plist"
+    substitutions = {
+        "daemon_name": daemon_name,
+        "daemon_interval": interval,
+        "daemon_workdir": workdir,
+        "daemon_logdir": logdir,
+        "daemon_env_path": env_path,
+        "daemon_env_cmd": env_cmd,
+        "daemon_env_cmd_args": env_cmd_args,
+        "daemon_env_notify_name": env_notify_name,
+        "daemon_env_email": env_email,
+        "daemon_script_path": script_path,
+    }
+
+    plist_template_path = (
+        "templates/daemon/launchd/com.recyoself.daemon.cmd.plist.template"
+    )
+    plist_data = Template(pkgutil.get_data(__name__, plist_template_path).decode())  # type: ignore
+    plist_text = plist_data.substitute(substitutions)
+
+    plist_output_path = os.path.join(output_dir, daemon_name)
+    with open(plist_output_path, "w") as f:
+        f.write(plist_text)
+
+    script_data = pkgutil.get_data(__name__, "templates/daemon/run-and-alert.sh").decode()  # type: ignore
+    with open(script_path, "w") as f:
+        f.write(script_data)
+    os.chmod(script_path, 0o744)
 
 
 if __name__ == "__main__":

@@ -4,7 +4,7 @@
   <dict>
 
     <key>Label</key>
-    <string>com.recyoselfx.daemon.plist</string>
+    <string>${daemon_name}</string>
 
     <key>RunAtLoad</key>
     <true/>
@@ -13,35 +13,35 @@
     <integer>-10</integer>
 
     <key>StartInterval</key>
-    <integer>900</integer>
+    <integer>${daemon_interval}</integer>
 
     <key>WorkingDirectory</key>
-    <string>/path/to/dir</string>
+    <string>${daemon_workdir}</string>
 
     <key>StandardErrorPath</key>
-    <string>path/to/logs/recyoself_stderr.log</string>
+    <string>${daemon_logdir}/recyoself_stderr.log</string>
 
     <key>StandardOutPath</key>
-    <string>path/to/logs/recyoself_stdout.log</string>
+    <string>${daemon_logdir}/recyoself_stdout.log</string>
 
     <key>EnvironmentVariables</key>
     <dict>
         <key>PATH</key>
-        <string>/bin:/usr/bin:/usr/local/bin:~/.local/bin</string>
+        <string>${daemon_env_path}</string>
         <key>RECYOSELF_DAEMON_CMD</key>
-        <string>your-command-path</string>
+        <string>${daemon_env_cmd}</string>
         <key>RECYOSELF_DAEMON_CMD_ARGS</key>
-        <string>your-command-arguments</string>
+        <string>${daemon_env_cmd_args}</string>
         <key>RECYOSELF_DAEMON_NOTIFY_NAME</key>
-        <string>Email Subject Addendum</string>
+        <string>${daemon_env_notify_name}</string>
         <key>RECYOSELF_DAEMON_EMAIL</key>
-        <string>example@example.com</string>
+        <string>${daemon_env_email}</string>
     </dict>
 
     <key>ProgramArguments</key>
     <array>
       <string>/bin/bash</string>
-      <string>path/to/run-and-alert.sh</string>
+      <string>${daemon_script_path}</string>
     </array>
   </dict>
 </plist>
