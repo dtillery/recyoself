@@ -288,8 +288,6 @@ launchctl bootstrap gui/`id -u` ~/Library/LaunchAgents/com.recyoself.daemon.your
 ```
 
 Deactivate the daemon:
-
-Activate the daemon for running:
 ```bash
 launchctl bootout gui/`id -u` ~/Library/LaunchAgents/com.recyoself.daemon.your-cmd.plist
 ```
