@@ -23,7 +23,7 @@ class LotteryType(str, BaseEnum):
 
 
 class Lottery(Base, table=True):
-    lottery_id: UUID = Field(index=True)
+    lottery_id: str = Field(index=True) # FIXME: is a UUID, should be annotated
     name: str = Field(index=True)
     desc: str | None
     summary: str | None
