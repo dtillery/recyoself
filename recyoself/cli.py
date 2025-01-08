@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Optional
 
 import click
 import questionary as qu
+from rich_click import RichCommand, RichGroup
 from sqlmodel import col, or_, select
 
 from . import AUTOCOMPLETE_STYLE
@@ -25,7 +26,7 @@ if TYPE_CHECKING:
 DAEMON_MODE: bool = False
 
 
-@click.group(chain=True)
+@click.group(cls=RichGroup, chain=True)
 @click.pass_context
 def cli(ctx) -> None:
     ctx.obj = {}
@@ -36,7 +37,7 @@ def echo(message: str = "", override: bool = False, **kwargs):
         click.secho(message, **kwargs)
 
 
-@cli.command()
+@cli.command(cls=RichCommand)
 @click.option(
     "--skip-download",
     type=bool,
@@ -65,7 +66,7 @@ def init(ctx, skip_download) -> None:
     ctx.invoke(load_lotteries)
 
 
-@cli.command()
+@cli.command(cls=RichCommand)
 @click.pass_context
 def drop(ctx) -> None:
     """Drop the database."""
@@ -73,7 +74,7 @@ def drop(ctx) -> None:
         drop_db()
 
 
-@cli.command()
+@cli.command(cls=RichCommand)
 @click.argument("permit_id")
 def load_divisions(permit_id):
     """Load divisions from rec.gov for a given Permit (Facility) ID"""
@@ -88,7 +89,7 @@ def load_divisions(permit_id):
             session.add(division)
 
 
-@cli.command()
+@cli.command(cls=RichCommand)
 def load_lotteries():
     """Load all currently available lotteries from rec.gov"""
     with Session.begin() as session:
@@ -97,7 +98,7 @@ def load_lotteries():
             session.add(lottery)
 
 
-@cli.command()
+@cli.command(cls=RichCommand)
 @click.argument("search_substring", type=str, default="")
 def list_lotteries(search_substring: str) -> None:
     """List all Lotteries saved in the database.
@@ -127,7 +128,7 @@ def list_lotteries(search_substring: str) -> None:
             echo()
 
 
-@cli.command()
+@cli.command(cls=RichCommand)
 @click.argument("facility_id")
 @click.pass_context
 def list_campsites(ctx, facility_id: str) -> None:
@@ -157,7 +158,7 @@ def list_campsites(ctx, facility_id: str) -> None:
             )
 
 
-@cli.command()
+@cli.command(cls=RichCommand)
 def list_itineraries() -> None:
     """List all Itineraries, with related permit name and all stops."""
     with Session.begin() as session:
@@ -168,7 +169,7 @@ def list_itineraries() -> None:
             echo()
 
 
-@cli.command()
+@cli.command(cls=RichCommand)
 @click.option(
     "-t",
     "--type",
@@ -204,7 +205,7 @@ def list_facilities(ftypes: tuple[str], search_substring: str) -> None:
             echo()
 
 
-@cli.command()
+@cli.command(cls=RichCommand)
 @click.argument("permit_id")
 @click.argument("new_itinerary_name")
 @click.pass_context
@@ -330,7 +331,7 @@ def print_availability_matches(
         )
 
 
-@cli.command()
+@cli.command(cls=RichCommand)
 @click.option(
     "--start-date",
     "-s",
@@ -452,7 +453,7 @@ def find_itinerary_dates(
                 print_availability_matches(avail_matches_reversed)
 
 
-@cli.command()
+@cli.command(cls=RichCommand)
 @click.option(
     "--start-date",
     "-s",
@@ -545,7 +546,7 @@ def find_campsite_dates(
                     echo(s, override=True, fg=color)
 
 
-@cli.command()
+@cli.command(cls=RichCommand)
 @click.option("--name", type=str, required=True)
 @click.option("--interval", type=int, required=True, default=900, show_default=True)
 @click.option("--workdir", type=click.Path(exists=True), default=lambda: Path.home())
