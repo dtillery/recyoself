@@ -122,9 +122,17 @@ def load_lotteries():
     multiple=True,
     type=click.Choice([s.name for s in LotteryStatus], case_sensitive=False),
 )
+@click.option(
+    "--order",
+    "order_by",
+    type=click.Choice(["open"], case_sensitive=False),
+)
 @click.argument("search_substring", type=str, default="")
 def list_lotteries(
-    ltypes: tuple[str], statuses: tuple[str], search_substring: str
+    ltypes: tuple[str],
+    statuses: tuple[str],
+    order_by: str | None,
+    search_substring: str,
 ) -> None:
     """List all Lotteries saved in the database.
 
@@ -137,6 +145,8 @@ def list_lotteries(
             stmt = stmt.where(or_(Lottery.type == LotteryType[t] for t in ltypes))  # type: ignore
         if statuses:
             stmt = stmt.where(or_(Lottery.status == LotteryStatus[s] for s in statuses))  # type: ignore
+        if order_by == "open":
+            stmt = stmt.order_by(col(Lottery.open_at).asc())
         if search_substring:
             stmt = stmt.where(
                 (col(Lottery.name).icontains(search_substring))
