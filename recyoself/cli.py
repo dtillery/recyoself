@@ -109,6 +109,13 @@ def load_lotteries():
 
 @cli.command(cls=RichCommand)
 @click.option(
+    "-f",
+    "--facility-id",
+    type=str,
+    help="filter lotteries by rec.gov Facility ID",
+    default=None,
+)
+@click.option(
     "-t",
     "--type",
     "ltypes",
@@ -126,9 +133,11 @@ def load_lotteries():
     "--order",
     "order_by",
     type=click.Choice(["open"], case_sensitive=False),
+    default="open",
 )
 @click.argument("search_substring", type=str, default="")
 def list_lotteries(
+    facility_id: str | None,
     ltypes: tuple[str],
     statuses: tuple[str],
     order_by: str | None,
@@ -140,7 +149,16 @@ def list_lotteries(
     search of the lottery's name and description.
     """
     with Session.begin() as session:
+        facility = None
+        if facility_id:
+            facility_stmt = select(Facility).where(Facility.facility_id == facility_id)
+            facility = session.scalars(facility_stmt).first()
+            if not facility:
+                raise ValueError(f"Could not find Facility with ID {facility_id}")
+
         stmt = select(Lottery)
+        if facility:
+            stmt = stmt.where(Lottery.facility == facility)
         if ltypes:
             stmt = stmt.where(or_(Lottery.type == LotteryType[t] for t in ltypes))  # type: ignore
         if statuses:
