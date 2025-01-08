@@ -321,9 +321,13 @@ def create_itinerary(ctx, permit_id, new_itinerary_name) -> None:
                 echo("Please provide an input.")
                 continue
             elif user_input == "list":
-                echo_via_pager(
-                    f"{d.name} ({d.type}, {d.district})\n" for d in reservable_divisions
+                echo(
+                    "".join(
+                        f"{d.name} ({d.type}, {d.district})\n"
+                        for d in reservable_divisions
+                    )
                 )
+                continue
 
             matching_divisions = [
                 d for d in reservable_divisions if user_input.lower() in d.name.lower()
@@ -333,7 +337,7 @@ def create_itinerary(ctx, permit_id, new_itinerary_name) -> None:
             ]
 
             if not matching_divisions:
-                echo(f'Could find division match for "{user_input}, please try again.')
+                echo(f'Could find division match for "{user_input}", please try again.')
             elif len(matching_divisions) > 1 and not exact_match:
                 matches_str = "\n".join([f">>> {d.name}" for d in matching_divisions])
                 echo(
