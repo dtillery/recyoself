@@ -16,7 +16,16 @@ from sqlmodel import col, or_, select
 
 from . import AUTOCOMPLETE_STYLE
 from .db import Session, drop_db, init_db
-from .models import Campsite, Facility, FacilityType, Itinerary, Lottery, Organization
+from .models import (
+    Campsite,
+    Facility,
+    FacilityType,
+    Itinerary,
+    Lottery,
+    LotteryStatus,
+    LotteryType,
+    Organization,
+)
 from .recreationdotgov import RecreationDotGov
 from .ridb import RIDB
 
@@ -99,8 +108,24 @@ def load_lotteries():
 
 
 @cli.command(cls=RichCommand)
+@click.option(
+    "-t",
+    "--type",
+    "ltypes",
+    multiple=True,
+    type=click.Choice([t.name for t in LotteryType], case_sensitive=False),
+)
+@click.option(
+    "-s",
+    "--status",
+    "statuses",
+    multiple=True,
+    type=click.Choice([s.name for s in LotteryStatus], case_sensitive=False),
+)
 @click.argument("search_substring", type=str, default="")
-def list_lotteries(search_substring: str) -> None:
+def list_lotteries(
+    ltypes: tuple[str], statuses: tuple[str], search_substring: str
+) -> None:
     """List all Lotteries saved in the database.
 
     Optionally provide SEARCH_SUBSTRING to filter based on a case-insensitive
@@ -108,6 +133,10 @@ def list_lotteries(search_substring: str) -> None:
     """
     with Session.begin() as session:
         stmt = select(Lottery)
+        if ltypes:
+            stmt = stmt.where(or_(Lottery.type == LotteryType[t] for t in ltypes))  # type: ignore
+        if statuses:
+            stmt = stmt.where(or_(Lottery.status == LotteryStatus[s] for s in statuses))  # type: ignore
         if search_substring:
             stmt = stmt.where(
                 (col(Lottery.name).icontains(search_substring))
@@ -120,6 +149,7 @@ def list_lotteries(search_substring: str) -> None:
             access_start = f"{l.access_start_at.date():%-m/%-d/%y}"
             access_end = f"{l.access_end_at.date():%-m/%-d/%y}"
             echo(f"{l.name}: {l.desc}", bold=True, underline=True)
+            echo(f"Type: {l.type.name.title()}")
             echo(f"UUID: {l.lottery_id}")
             echo(f"Facility: {l.facility.name} ({l.facility.facility_id})")
             echo(f"Status: {l.status.name.title()}")

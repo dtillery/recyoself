@@ -2,7 +2,7 @@ from .campsite import Campsite
 from .division import Division
 from .facility import Facility, FacilityType
 from .itinerary import Itinerary
-from .lottery import Lottery
+from .lottery import Lottery, LotteryStatus, LotteryType
 from .ordered_itinerary_division import OrderedItineraryDivision
 from .organization import Organization
 from .recreation_area import RecreationArea
