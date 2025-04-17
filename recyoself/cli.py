@@ -15,7 +15,7 @@ from rich_click import RichCommand, RichGroup
 from sqlmodel import col, or_, select
 
 from . import AUTOCOMPLETE_STYLE
-from .db import Session, drop_db, init_db
+from .db import Session, drop_db, upgrade_db
 from .models import (
     Campsite,
     Facility,
@@ -56,7 +56,7 @@ def echo(message: str = "", override: bool = False, **kwargs):
 @click.pass_context
 def init(ctx, skip_download) -> None:
     """Initialize the database and load initial entities from RIDB/Rec.gov."""
-    init_db()
+    upgrade_db()
     ridb = RIDB()
     if not skip_download:
         echo(f"Fetching RIDB entities full-export CSVs...", bold=True, underline=True)
