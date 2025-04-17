@@ -1,6 +1,6 @@
 [project]
 name = "recyoself"
-version = "0.4.0"
+version = "0.4.1"
 description = "Tool for interacting with recreation.gov"
 readme = "README.md"
 authors = [
@@ -24,10 +24,10 @@ recyoself = "recyoself.cli:cli"
 dev = [
     "mypy >=1.9.0, <2.0.0",
     "types-requests >=2.31.0.20240406, <3.0.0.0",
-    "black >=24.3.0, <25.0.0",
-    "isort >=5.13.2, <6.0.0",
     "types-tqdm >=4.66.0.20240106, <5.0.0.0",
     "pre-commit >=4.0.1, <5.0.0",
+    "black>=25.1.0",
+    "isort>=6.0.1",
 ]
 
 [build-system]
