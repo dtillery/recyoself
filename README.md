@@ -71,6 +71,11 @@ Initial Rec.gov entities loaded include:
 Completely drop the database and all contents. This will ask for y/n confirmation before
 commencing.
 
+### `check-for-updated-data`
+Downloads most current RIDB csv data and does a checksum (sha256) comparison for relevant
+entities against the previously loaded data. This will (hopefully) let you know if there
+is updated data that needs to be loaded.
+
 ### `load-divisions PERMIT_ID`
 Retrieve and persist all divisions for a given Permit (aka a Facility) based on the Rec.gov
 ID (**not** the internal DB id). This is only to save general information about each division,
@@ -185,6 +190,7 @@ date will be used (i.e. single day trip start).
 lotteries are found for a facility (to facilitate daemon-mode)
 * `--daemon-mode` (optional): Only print output if availabilities are found (to facilitate
 running as a daemonized-script and running actions based on results).
+* `--pretty-cal` (optional): Print availabile start dates with a prettier calendar UI.
 
 ```bash
 # find available date options for the blueglacier Itinerary in June

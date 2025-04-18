@@ -28,6 +28,7 @@ from .models import (
 )
 from .recreationdotgov import RecreationDotGov
 from .ridb import RIDB
+from .utils.calendar import AvailabilityCalendar
 
 if TYPE_CHECKING:
     from .division_availability import DivisionAvailability
@@ -393,16 +394,34 @@ def find_division_availability_date_matches(
 
 
 def print_availability_matches(
-    avail_matches: list[list[tuple["DivisionAvailability", datetime.date]]]
+    avail_matches: list[list[tuple["DivisionAvailability", datetime.date]]],
+    pretty_cal: bool = False,
 ) -> None:
-    for match in avail_matches:
-        first_day = f"{match[0][1]:%a, %b %-d}"
-        last_day = f"{match[-1][1]:%a, %b %-d}"
-        echo(f"{first_day} - {last_day}", override=True, bold=True)
-        echo(
-            "\n".join([f"{i[1]:%-m/%-d/%y}: {i[0].division.name}" for i in match]),
-            override=True,
-        )
+    if pretty_cal:
+        echo("Itinerary start date only colored.\n")
+        # get distinct years for first day of all matches
+        years = {match[0][1].year for match in avail_matches}
+        calendars: dict[int, AvailabilityCalendar] = {
+            y: AvailabilityCalendar(y) for y in years
+        }
+        # mark start dates as available
+        for match in avail_matches:
+            start = match[0][1]
+            calendars[start.year].set_available(start.month, start.day)
+        # print relevant months
+        for cal in calendars.values():
+            for month in cal.styled_months:
+                cal.print_month(month)
+                echo("")
+    else:
+        for match in avail_matches:
+            first_day = f"{match[0][1]:%a, %b %-d}"
+            last_day = f"{match[-1][1]:%a, %b %-d}"
+            echo(f"{first_day} - {last_day}", override=True, bold=True)
+            echo(
+                "\n".join([f"{i[1]:%-m/%-d/%y}: {i[0].division.name}" for i in match]),
+                override=True,
+            )
 
 
 @cli.command(cls=RichCommand)
@@ -440,6 +459,12 @@ def print_availability_matches(
     is_flag=True,
     help="Output only if availabilities are found (for daemonizing purposes)",
 )
+@click.option(
+    "--pretty-cal",
+    type=bool,
+    is_flag=True,
+    help="Print dates with a pretty calendar UI",
+)
 @click.argument("itinerary_name")
 @click.pass_context
 def find_itinerary_dates(
@@ -449,6 +474,7 @@ def find_itinerary_dates(
     reversable: bool,
     lottery_id: Optional[str],
     daemon_mode: bool,
+    pretty_cal: bool,
     itinerary_name: str,
 ) -> None:
     """Find available booking dates for a named itinerary."""
@@ -502,7 +528,11 @@ def find_itinerary_dates(
             avail_matches_reversed = find_division_availability_date_matches(
                 division_availabilities[::-1]
             )
-
+        echo(
+            f'Itinerary "{itinerary.name}": {len(itinerary.divisions)} nights',
+            bold=True,
+            underline=True,
+        )
         if not (avail_matches or avail_matches_reversed):
             echo(
                 "No possible date matches found for itinerary. :(", fg="red", bold=True
@@ -515,7 +545,7 @@ def find_itinerary_dates(
                 underline=True,
                 fg="green",
             )
-            print_availability_matches(avail_matches)
+            print_availability_matches(avail_matches, pretty_cal)
             if reversable:
                 echo(
                     f"{len(avail_matches_reversed)} reversed-itinerary date matches found:",
@@ -524,7 +554,7 @@ def find_itinerary_dates(
                     underline=True,
                     fg="green",
                 )
-                print_availability_matches(avail_matches_reversed)
+                print_availability_matches(avail_matches_reversed, pretty_cal)
 
 
 @cli.command(cls=RichCommand)
