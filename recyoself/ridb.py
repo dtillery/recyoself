@@ -1,4 +1,5 @@
 import csv
+import hashlib
 import os
 from tempfile import NamedTemporaryFile
 from typing import IO, TYPE_CHECKING, Any, Iterator
@@ -10,7 +11,7 @@ from tqdm import tqdm
 
 from recyoself import USER_DATA_DIR
 
-from .models import Campsite, Facility, Organization, RecreationArea
+from .models import Campsite, EntityChecksum, Facility, Organization, RecreationArea
 
 if TYPE_CHECKING:
     from sqlalchemy.orm import Session
@@ -28,7 +29,22 @@ class RIDB:
     def data_dir(self) -> str:
         return f"{USER_DATA_DIR}/ridb"
 
-    def make_organizations(self) -> Iterator[Organization]:
+    def fetch_entities(self) -> None:
+        with NamedTemporaryFile(delete_on_close=False) as tempf:
+            self._download_zip(tempf)
+            self._extract_entities(tempf)
+
+    def is_entity_csv_updated(self, entity: str, session: "Session") -> bool:
+        csv_checksum = self._get_csv_checksum(self._csv_filepath_for(entity))
+        checksum_stmt = select(EntityChecksum).where(EntityChecksum.name == entity)
+        entity_checksum = session.scalars(checksum_stmt).first()
+        if not entity_checksum:
+            return True
+        return csv_checksum != entity_checksum.checksum
+
+    def make_organizations(self, session: "Session") -> Iterator[Organization]:
+        self._update_entity_checksum("Organizations", session)
+
         for data in self._read_csv("Organizations"):
             yield Organization(
                 name=data["OrgName"],
@@ -45,6 +61,8 @@ class RIDB:
         return Organization(name="US Government", abbr="USA", org_id="157")
 
     def make_rec_areas(self, session: "Session") -> Iterator[RecreationArea]:
+        self._update_entity_checksum("RecAreas", session)
+
         for data in self._read_csv("RecAreas"):
             kwargs = {
                 "name": data["RecAreaName"],
@@ -60,6 +78,8 @@ class RIDB:
             yield RecreationArea(org=org, **kwargs)
 
     def make_facilities(self, session: "Session") -> Iterator[Facility]:
+        self._update_entity_checksum("Facilities", session)
+
         for data in self._read_csv("Facilities"):
             if not data["FacilityName"]:
                 continue
@@ -86,6 +106,8 @@ class RIDB:
             yield Facility(org=org, rec_area=rec_area, **kwargs)
 
     def make_campsites(self, session: "Session") -> Iterator[Campsite]:
+        self._update_entity_checksum("Campsites", session)
+
         for data in self._read_csv("Campsites"):
             campsite_type, electric, group_site = self._parse_campsite_type(
                 data["CampsiteType"]
@@ -105,11 +127,6 @@ class RIDB:
             facility = session.scalars(facility_stmt).first()
 
             yield Campsite(facility=facility, **kwargs)
-
-    def fetch_entities(self) -> None:
-        with NamedTemporaryFile(delete_on_close=False) as tempf:
-            self._download_zip(tempf)
-            self._extract_entities(tempf)
 
     def _parse_campsite_type(self, type_str: str) -> tuple[str, bool, bool]:
         electric = False
@@ -152,8 +169,11 @@ class RIDB:
     def _ensure_data_dir(self):
         os.makedirs(self.data_dir, exist_ok=True)
 
+    def _csv_filepath_for(self, entity: str) -> str:
+        return f"{self.data_dir}/{entity}_API_v1.csv"
+
     def _read_csv(self, entity: str) -> Iterator[dict[str, str]]:
-        filepath = f"{self.data_dir}/{entity}_API_v1.csv"
+        filepath = self._csv_filepath_for(entity)
         num_lines = self._get_num_records_csv(filepath)
         with open(filepath, "r") as f:
             reader = csv.DictReader(f)
@@ -168,3 +188,17 @@ class RIDB:
         with open(filepath, "r") as f:
             reader = csv.reader(f)
             return sum(1 for _ in reader) - 1
+
+    def _get_csv_checksum(self, filepath: str) -> str:
+        with open(filepath, "rb") as f:
+            digest = hashlib.file_digest(f, "sha256")
+        return digest.hexdigest()
+
+    def _update_entity_checksum(self, entity: str, session: "Session") -> None:
+        new_checksum = self._get_csv_checksum(self._csv_filepath_for(entity))
+        entity_cs_stmt = select(EntityChecksum).where(EntityChecksum.name == entity)
+        entity_cs = session.scalars(entity_cs_stmt).first()
+        if not entity_cs:
+            entity_cs = EntityChecksum(name=entity)
+        entity_cs.checksum = new_checksum
+        session.add(entity_cs)

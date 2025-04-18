@@ -54,7 +54,7 @@ def echo(message: str = "", override: bool = False, **kwargs):
     help="Use cached files from a previous run.",
 )
 @click.pass_context
-def init(ctx, skip_download) -> None:
+def init(ctx, skip_download: bool) -> None:
     """Initialize the database and load initial entities from RIDB/Rec.gov."""
     init_db()
     ridb = RIDB()
@@ -63,7 +63,7 @@ def init(ctx, skip_download) -> None:
         ridb.fetch_entities()
     with Session.begin() as session:
         echo(f"Loading entities into database...", bold=True, underline=True)
-        for organization in ridb.make_organizations():
+        for organization in ridb.make_organizations(session):
             session.add(organization)
         session.add(ridb.make_org_157())
         for rec_area in ridb.make_rec_areas(session):
@@ -81,6 +81,18 @@ def drop(ctx) -> None:
     """Drop the database."""
     if click.confirm("Do you want to drop the database?", abort=True):
         drop_db()
+
+
+@cli.command(cls=RichCommand)
+@click.pass_context
+def check_for_updated_data(ctx) -> None:
+    """Check if RIDB CSVs contain new data compared to checksums on file."""
+    ridb = RIDB()
+    echo(f"Fetching RIDB entities full-export CSVs...", bold=True, underline=True)
+    ridb.fetch_entities()
+    with Session.begin() as session:
+        for entity in ridb.entities:
+            echo(f"Updates for {entity}: {ridb.is_entity_csv_updated(entity, session)}")
 
 
 @cli.command(cls=RichCommand)

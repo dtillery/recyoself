@@ -1,5 +1,6 @@
 from .campsite import Campsite
 from .division import Division
+from .entity_checksum import EntityChecksum
 from .facility import Facility, FacilityType
 from .itinerary import Itinerary
 from .lottery import Lottery, LotteryStatus, LotteryType
