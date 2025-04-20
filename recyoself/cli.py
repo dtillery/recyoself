@@ -398,7 +398,7 @@ def print_availability_matches(
     pretty_cal: bool = False,
 ) -> None:
     if pretty_cal:
-        echo("Itinerary start date only colored.\n")
+        echo("Starting dates only colored.\n")
         # get distinct years for first day of all matches
         years = {match[0][1].year for match in avail_matches}
         calendars: dict[int, AvailabilityCalendar] = {
@@ -422,6 +422,134 @@ def print_availability_matches(
                 "\n".join([f"{i[1]:%-m/%-d/%y}: {i[0].division.name}" for i in match]),
                 override=True,
             )
+
+
+@cli.command(cls=RichCommand)
+@click.option(
+    "--start-date",
+    "-s",
+    type=click.DateTime(formats=["%Y-%m-%d"]),
+    required=True,
+    metavar="<YYYY-MM-DD>",
+)
+@click.option(
+    "--end-date",
+    "-e",
+    type=click.DateTime(formats=["%Y-%m-%d"]),
+    default=None,
+    metavar="<YYYY-MM-DD>",
+)
+@click.option(
+    "--pretty-cal",
+    type=bool,
+    is_flag=True,
+    help="Print dates with a pretty calendar UI",
+)
+@click.argument("permit_id")
+@click.pass_context
+def find_division_dates(
+    ctx,
+    start_date: datetime.datetime,
+    end_date: Optional[datetime.datetime],
+    pretty_cal: bool,
+    permit_id: str,
+) -> None:
+    """Check availability dates for a specific division within a permit."""
+    # TODO: DRY this all up
+    start = start_date.date()
+    end = end_date and end_date.date() or start
+
+    with Session.begin() as session:
+        permit = session.scalars(
+            select(Facility).where(Facility.facility_id == permit_id)
+        ).first()
+        if not permit:
+            echo(click.style(f"No Permit found with ID {permit_id}.", fg="red"))
+            return
+
+        if not permit.divisions:
+            if click.confirm(f'No divisions found for permit "{permit.name}". Load?'):
+                ctx.invoke(load_divisions, permit_id=permit_id)
+                session.refresh(permit)
+
+        reservable_divisions = [d for d in permit.divisions if d.is_reservable]
+        if not reservable_divisions:
+            echo("No currently reservable sites found. :(")
+            return
+
+        lotteries = permit.lotteries
+        relevant_lottery = None
+        if len(lotteries) == 0:
+            pass
+        elif len(lotteries) == 1:
+            relevant_lottery = lotteries[0]
+        else:
+            # TODO: Handle lottery IDs like below
+            pass
+
+        meta_info = {
+            "exit": "End session",
+        }
+        for d in reservable_divisions:
+            meta_info[d.name] = f"{d.type}, {d.district}"
+
+        echo("Begin typing and make a selection to see availability.", bold=True)
+        echo('=> "exit" to end session')
+        while True:
+            # qu modifies meta_info inplace, so we need a copy. shallow is fine.
+            user_input = qu.autocomplete(
+                "Choose a division:",
+                choices=list(meta_info.keys()),
+                meta_information=meta_info.copy(),
+                ignore_case=True,
+                match_middle=True,
+                style=AUTOCOMPLETE_STYLE,
+            ).ask()
+
+            if user_input == "exit":
+                return
+
+            matching_divisions = [
+                d for d in reservable_divisions if user_input.lower() in d.name.lower()
+            ]
+            exact_match = [
+                d for d in matching_divisions if user_input.lower() == d.name.lower()
+            ]
+
+            if not matching_divisions:
+                echo(f'Could find division match for "{user_input}", please try again.')
+            elif len(matching_divisions) > 1 and not exact_match:
+                matches_str = "\n".join([f">>> {d.name}" for d in matching_divisions])
+                echo(
+                    f"Found multiple matches for {user_input}:\n{matches_str}\nPlease be more specific."
+                )
+            else:
+                division = exact_match and exact_match[0] or matching_divisions[0]
+                echo(f"Finding available dates for {division.name}...")
+                rdg = RecreationDotGov()
+                division_availabilities: list[DivisionAvailability] = [
+                    rdg.make_division_availabilities(
+                        start, end, division, relevant_lottery
+                    )
+                ]
+                avail_matches = find_division_availability_date_matches(
+                    division_availabilities
+                )
+                if not avail_matches:
+                    echo(
+                        "No possible date matches found for itinerary. :(",
+                        fg="red",
+                        bold=True,
+                    )
+                else:
+                    echo(
+                        f"{len(avail_matches)} date matches found:",
+                        override=True,
+                        bold=True,
+                        underline=True,
+                        fg="green",
+                    )
+                print_availability_matches(avail_matches, pretty_cal)
 
 
 @cli.command(cls=RichCommand)
