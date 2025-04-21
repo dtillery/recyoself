@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 from typing import TYPE_CHECKING
 from uuid import UUID
 
@@ -42,4 +42,7 @@ class Lottery(Base, table=True):
 
     @property
     def in_early_access(self):
-        return self.access_start_at < datetime.now() < self.access_end_at
+        # It seems that while access dates from rec.gov are datetimes, the hours are
+        # maybe not respected and only the day matters (based on personal experience).
+        # So for now we'll just check against the day (and it is inclusive)
+        return self.access_start_at.date() <= date.today() <= self.access_end_at.date()
