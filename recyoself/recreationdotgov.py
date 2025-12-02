@@ -74,6 +74,11 @@ class RecreationDotGov:
                         lottery_data["inventory_info"]["dates"]["end"]
                     ),
                 }
+                if not facility:
+                    print(
+                        f'Cannot process lottery "{kwargs["name"]} ({kwargs["lottery_id"]}): Facility "{facility_id}" not found.'
+                    )
+                    continue
                 yield Lottery(facility=facility, **kwargs)
                 progress_bar.update()
 

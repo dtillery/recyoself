@@ -94,7 +94,11 @@ class RIDB:
                 Organization.org_id == data["OrgFacilityID"]
             )
             org = session.scalars(org_stmt).first()
-
+            if not org:
+                print(
+                    f'Cannot process facility "{kwargs["name"]} ({kwargs["facility_id"]}): Org "{data["OrgFacilityID"]}" not found.'
+                )
+                continue
             rec_area = None
             rec_area_id = data["ParentRecAreaID"]
             if rec_area_id:
